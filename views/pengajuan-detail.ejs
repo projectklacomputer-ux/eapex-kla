@@ -145,7 +145,11 @@
           <% if (bentuk === 'capex') { %>
             <dt>Nama proyek</dt><dd><%= d.nama_proyek || '-' %></dd>
             <dt>Tujuan pengadaan</dt><dd><%
-              var tj = (d.tujuan || []).map(function (k) {
+              // [].concat() supaya nilai tunggal pun tetap terbaca. Tanpa ini,
+              // data_json yang 'tujuan'-nya bukan daftar membuat SELURUH halaman
+              // rincian gagal dimuat (500) - dokumennya tidak bisa diperiksa
+              // maupun disetujui siapa pun.
+              var tj = [].concat(d.tujuan || []).map(function (k) {
                 var f = TUJUAN_CAPEX.filter(function (x) { return x.kode === k; })[0]; return f ? f.teks : k; });
             %><%= tj.length ? tj.join(', ') : '-' %></dd>
             <dt>Kategori aset</dt><dd><%= d.kategori_aset || '-' %></dd>

@@ -27,3 +27,6 @@ Thumbs.db
 
 .vercel
 .env*
+
+# Berkas antara pembuat tutorial (PDF-nya yang disimpan, bukan HTML-nya)
+docs/Tutorial-*.html
