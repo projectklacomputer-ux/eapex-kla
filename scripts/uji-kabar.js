@@ -131,6 +131,20 @@ class Klien {
     const t = await this.csrf('/login');
     return this.post('/login', [['email', email], ['sandi', sandi], ['tujuan', '/']], t);
   }
+  // Sama seperti masuk(), tapi ikut mengembalikan header Set-Cookie apa adanya —
+  // dipakai memeriksa masa berlaku cookie sesi.
+  async masukMentah(email, sandi) {
+    const t = await this.csrf('/login');
+    const body = new URLSearchParams({ _csrf: t, email, sandi, tujuan: '/' });
+    const r = await fetch(this.dasar + '/login', {
+      method: 'POST', redirect: 'manual',
+      headers: { ...this.header, 'content-type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    const kue = r.headers.getSetCookie ? r.headers.getSetCookie() : [];
+    this.simpan(r);
+    return { status: r.status, kue };
+  }
 }
 
 // ---------------------------------------------------------------- jalankan
@@ -675,6 +689,66 @@ class Klien {
       cek(tulis.namaLembarAman('x'.repeat(60)).length === 31, 'nama lembar dipotong ke batas 31 karakter');
       cek(tulis.hurufKolom(0) === 'A' && tulis.hurufKolom(25) === 'Z' && tulis.hurufKolom(26) === 'AA',
         'penomoran kolom benar sampai melewati Z');
+    }
+
+    // ================================================ I. SESI BERAKHIR SENDIRI
+    console.log('\n\x1b[1mKELUAR SENDIRI SETELAH DIAM\x1b[0m');
+    {
+      const halLogin = await new Klien(dasar).get('/login');
+      const maxAgeDetik = 60 * 60;   // 60 menit
+
+      // Masa berlakunya dibaca dari cookie yang benar-benar dikirim server, bukan
+      // dari kode — supaya yang diuji perilakunya, bukan niatnya.
+      const kSesi = new Klien(dasar);
+      const rMasuk = await kSesi.masukMentah('sm.smg@kla.co.id', SANDI);
+      const kueSesi = (rMasuk.kue || []).find(c => c.startsWith('eapex.sid=')) || '';
+      const habisPada = (/Expires=([^;]+)/i.exec(kueSesi) || [])[1];
+      const menit = habisPada ? Math.round((new Date(habisPada) - Date.now()) / 60000) : -1;
+      cek(menit >= 59 && menit <= 61,
+        'cookie sesi berlaku ' + menit + ' menit, bukan berjam-jam');
+      cek(/HttpOnly/i.test(kueSesi), 'cookie sesi tidak bisa dibaca skrip halaman (HttpOnly)');
+
+      // Rolling: masa berlakunya disetel ULANG tiap permintaan, jadi yang dihitung
+      // memang diamnya — bukan lama sejak masuk.
+      const isiApp = require('fs').readFileSync(path.join(AKAR, 'app.js'), 'utf8');
+      cek(/rolling:\s*true/.test(isiApp),
+        'masa berlaku disetel ulang tiap permintaan — orang yang bekerja terus tidak terlempar keluar');
+
+      // Batas MUTLAK: sesi yang dipakai terus pun tidak boleh abadi.
+      const authMod = require(path.join(AKAR, 'lib/auth'));
+      cek(authMod.SESI_MAKS_JAM() === 12, 'ada batas mutlak 12 jam, seaktif apa pun pemakainya');
+
+      // Sesi yang umurnya sudah lewat batas mutlak ditolak walau cookienya sah.
+      const idSm = await idDari('sm.smg@kla.co.id');
+      const sidBaris = await db.all('SELECT sid, sess FROM sesi');
+      let diubah = 0;
+      for (const s of sidBaris) {
+        const isi = JSON.parse(s.sess);
+        if (isi.penggunaId !== idSm) continue;
+        isi.mulai = Date.now() - 13 * 3600 * 1000;      // seolah masuk 13 jam lalu
+        await db.run('UPDATE sesi SET sess = ? WHERE sid = ?', [JSON.stringify(isi), s.sid]);
+        diubah++;
+      }
+      cek(diubah > 0, 'sesi uji ditemukan untuk dituakan');
+      const rTua = await kSesi.get('/');
+      cek(rTua.status === 302, 'sesi berumur 13 jam ditolak walau cookienya masih sah');
+
+      // Pesannya tepat: orang yang sesinya habis tidak disuruh menebak.
+      const rPesan = await fetch(dasar + '/pengajuan', {
+        headers: { cookie: 'eapex.pernah=1' }, redirect: 'manual',
+      });
+      const tujuanBalik = rPesan.headers.get('location') || '';
+      cek(/habis=1/.test(tujuanBalik), 'peramban yang pernah dipakai masuk diarahkan dengan tanda "sesi habis"');
+      const halHabis = await (await fetch(dasar + '/login?habis=1')).text();
+      cek(/Sesi Anda berakhir/.test(halHabis) && /60 menit/.test(halHabis),
+        'layar masuk menjelaskan sebabnya, bukan sekadar melempar balik');
+      cek(!/Sesi Anda berakhir/.test(halLogin.teks),
+        'yang belum pernah masuk TIDAK diberi pesan yang membingungkan');
+
+      // Keluar sendiri membuang penandanya, supaya tidak disambut pesan palsu.
+      const isiRute = require('fs').readFileSync(path.join(AKAR, 'routes/auth.js'), 'utf8');
+      cek(/auth\.buangPenanda\(res\)/.test(isiRute),
+        'keluar atas kemauan sendiri membuang penandanya');
     }
 
     // --- isi email massal

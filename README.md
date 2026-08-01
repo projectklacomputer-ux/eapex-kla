@@ -1072,3 +1072,31 @@ setuju, lewat pilihan "Lewati tahap berikutnya".
 
 Cukup **satu** calon penyetuju yang masih sanggup untuk membuat dokumennya jalan;
 peringatan ini hanya muncul kalau benar-benar tidak ada yang bisa.
+
+---
+
+## Sesi keluar sendiri setelah 60 menit diam
+
+Aplikasi ini dibuka di komputer kasir dan komputer bersama di cabang. Layar yang
+ditinggal tanpa keluar berarti siapa pun yang lewat bisa menyetujui dokumen atas
+nama orang itu.
+
+**Yang dihitung diamnya, bukan lama masuknya.** Masa berlaku sesi disetel ulang
+pada setiap permintaan, jadi orang yang sedang bekerja tidak akan terlempar keluar
+di tengah mengisi formulir. Yang keluar sendiri hanya yang benar-benar ditinggal.
+
+| Batas | Bawaan | Env |
+|---|---|---|
+| Diam tanpa aktivitas | **60 menit** | `SESI_MENIT` |
+| Umur satu sesi, seaktif apa pun | **12 jam** | `SESI_MAKS_JAM` |
+
+Batas mutlak 12 jam ada supaya sesi tidak pernah abadi. Tanpa itu, komputer
+bersama bisa tetap masuk berminggu-minggu asal ada yang menyentuhnya tiap jam.
+
+Saat sesinya habis, layar masuk menjelaskan sebabnya — *"Sesi Anda berakhir karena
+tidak ada aktivitas selama 60 menit"* — bukan sekadar melempar balik tanpa
+keterangan, yang membuat orang mengira aplikasinya rusak atau sandinya bermasalah.
+
+Pesan itu muncul hanya untuk peramban yang **pernah** dipakai masuk, ditandai satu
+cookie berisi angka 1 tanpa data pengguna apa pun. Yang keluar atas kemauan
+sendiri tidak akan disambut pesan itu saat kembali.

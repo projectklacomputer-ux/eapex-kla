@@ -15,6 +15,7 @@ module.exports = function (batasLogin) {
       tujuan: bersihkanTujuan(req.query.tujuan),
       galat: null,
       email: '',
+      sesiHabis: req.query.habis === '1',
     });
   });
 
@@ -28,26 +29,33 @@ module.exports = function (batasLogin) {
         aksi: 'login-gagal', detail: 'Percobaan login gagal', ip: req.ip,
       });
       return res.status(401).render('login', {
-        judul: 'Masuk — EAPEX', tujuan, galat: hasil.pesan, email: String(email || '').slice(0, 120),
+        judul: 'Masuk — EAPEX', tujuan, galat: hasil.pesan,
+        email: String(email || '').slice(0, 120), sesiHabis: false,
       });
     }
     // Ganti id sesi setelah login (mencegah session fixation)
     req.session.regenerate(async err => {
       if (err) throw err;
       req.session.penggunaId = hasil.pengguna.id;
+      // Dicatat untuk batas MUTLAK umur sesi (lihat lib/auth.js). Batas diam
+      // 60 menit ditangani cookie yang masa berlakunya disetel ulang tiap permintaan.
+      req.session.mulai = Date.now();
+      auth.pasangPenanda(res);
       await catatJejak(null, { pengguna: hasil.pengguna, aksi: 'login', detail: 'Berhasil masuk', ip: req.ip });
       res.redirect(hasil.pengguna.wajib_ganti_sandi ? '/ganti-sandi' : tujuan);
     });
   });
 
-  r.post('/keluar', (req, res) => {
+  // Keluar atas kemauan sendiri: penandanya ikut dibuang, supaya saat kembali
+  // tidak disambut pesan "sesi berakhir" yang tidak pernah terjadi.
+  const keluar = (req, res) => {
+    auth.buangPenanda(res);
     req.session.destroy(() => res.redirect('/login'));
-  });
+  };
+  r.post('/keluar', keluar);
   // Tautan "keluar" di menu memakai formulir POST; GET disediakan agar
   // sesi kedaluwarsa tetap bisa dibersihkan dari bilah alamat.
-  r.get('/keluar', (req, res) => {
-    req.session.destroy(() => res.redirect('/login'));
-  });
+  r.get('/keluar', keluar);
 
   r.get('/ganti-sandi', (req, res) => {
     if (!req.pengguna) return res.redirect('/login');

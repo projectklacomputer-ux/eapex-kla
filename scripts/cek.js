@@ -1572,10 +1572,31 @@ async function cekAlur() {
         && !(pkg.dependencies && pkg.dependencies['better-sqlite3']),
         'better-sqlite3 jadi paket opsional — pemasangan di hosting tidak gagal karena modul asli');
 
-      // Rahasia tidak boleh ikut ke repositori
-      const abaikan = fsD.readFileSync(P('.gitignore'), 'utf8');
-      cek(/^\.env$/m.test(abaikan) && /AKUN-AWAL/.test(abaikan) && /data\/\*\.db/.test(abaikan),
-        '.gitignore menutup .env, catatan akun, dan basis data lokal');
+      // Rahasia tidak boleh ikut ke repositori. Diuji dengan MENANYAKAN GIT
+      // langsung, bukan mencocokkan pola di .gitignore — pernah terjadi
+      // `data/AKUN-AWAL.txt` terdaftar tapi `data/EAPEX-Akun-Awal.docx` yang
+      // isinya sama-sama sandi tidak, dan pemeriksaan berbasis pola meloloskannya.
+      const RAHASIA = [
+        '.env',
+        'data/AKUN-AWAL.txt',
+        'data/eapex.db',
+        'data/EAPEX-Akun-Awal.docx',
+        'data/lampiran/contoh-penawaran.pdf',
+        'data/apa-pun-yang-baru.docx',
+      ];
+      const jalankanGit = a => require('child_process')
+        .spawnSync('git', a, { cwd: P('.'), encoding: 'utf8' });
+      const adaRepo = jalankanGit(['rev-parse', '--is-inside-work-tree']).status === 0;
+      if (adaRepo) {
+        const lolos = RAHASIA.filter(f => jalankanGit(['check-ignore', '-q', f]).status !== 0);
+        cek(lolos.length === 0,
+          'git benar-benar mengabaikan seluruh berkas rahasia di data/'
+          + (lolos.length ? ' — LOLOS: ' + lolos.join(', ') : ''));
+      } else {
+        const abaikan = fsD.readFileSync(P('.gitignore'), 'utf8');
+        cek(/^\.env$/m.test(abaikan) && /^data\/\*$/m.test(abaikan),
+          '.gitignore memblokir .env dan seluruh isi data/ (repo belum dibuat, diperiksa dari polanya)');
+      }
       const contohEnv = fsD.readFileSync(P('.env.example'), 'utf8');
       cek(/OPENAI_API_KEY=\s*$/m.test(contohEnv) || /# OPENAI_API_KEY=\s*$/m.test(contohEnv),
         '.env.example memuat OPENAI_API_KEY tanpa nilai sungguhan');

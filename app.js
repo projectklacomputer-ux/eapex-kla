@@ -93,6 +93,16 @@ const rahasia = process.env.SESSION_SECRET;
 if (!rahasia && process.env.NODE_ENV === 'production') {
   throw new Error('SESSION_SECRET wajib diisi di produksi (lihat .env.example)');
 }
+// Sesi berakhir setelah 60 MENIT TANPA AKTIVITAS. Karena `rolling: true`, masa
+// berlaku cookie disetel ulang pada setiap permintaan — jadi yang dihitung memang
+// diamnya, bukan lama masuknya. Orang yang bekerja terus tidak akan terlempar
+// keluar di tengah mengisi formulir.
+//
+// Kenapa perlu: aplikasi ini dibuka di komputer kasir dan komputer bersama di
+// cabang. Layar yang ditinggal tanpa keluar berarti siapa pun yang lewat bisa
+// menyetujui dokumen atas nama orang itu.
+const SESI_MENIT = Number(process.env.SESI_MENIT) > 0 ? Number(process.env.SESI_MENIT) : 60;
+
 app.use(session({
   name: 'eapex.sid',
   secret: rahasia || 'rahasia-pengembangan-lokal-jangan-dipakai-di-produksi',
@@ -104,7 +114,7 @@ app.use(session({
     httpOnly: true,
     sameSite: 'lax',
     secure: !!process.env.DI_BELAKANG_PROXY,
-    maxAge: 12 * 3600 * 1000,
+    maxAge: SESI_MENIT * 60 * 1000,
   },
 }));
 
@@ -131,6 +141,7 @@ app.use((req, res, next) => {
   res.locals.ringkasProgres = P.ringkasProgres;
   res.locals.capAset = CAP_ASET;
   res.locals.maksLampiranMB = MAKS_LAMPIRAN_MB;
+  res.locals.sesiMenit = SESI_MENIT;
   res.locals.judul = 'EAPEX';
   res.locals.menuAktif = '';
   res.locals.jumlahInbox = 0;

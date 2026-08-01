@@ -24,6 +24,12 @@
       <span class="pt">PT KLA TEKNOLOGI INDONESIA</span>
     </div>
 
+    <% if (locals.sesiHabis) { %>
+      <div class="pesan ingat">
+        <b>Sesi Anda berakhir</b> karena tidak ada aktivitas selama <%= sesiMenit %> menit.
+        Masuk lagi untuk melanjutkan — draft yang sudah tersimpan tidak hilang.
+      </div>
+    <% } %>
     <% if (galat) { %><div class="pesan galat">⚠ <%= galat %></div><% } %>
 
     <input type="hidden" name="_csrf" value="<%= csrf %>">
