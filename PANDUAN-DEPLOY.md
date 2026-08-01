@@ -1,131 +1,123 @@
 # Panduan Deploy EAPEX — GitHub → Supabase → Vercel
 
-Urutannya tidak boleh dibalik: Vercel butuh repo GitHub **dan** alamat basis data
-Supabase, jadi keduanya harus jadi lebih dulu.
+Semuanya dikerjakan lewat **situs**. PowerShell hanya dipakai di Bagian 1 untuk
+mendorong berkasnya; Bagian 2 dan 3 murni klik-klik di peramban.
 
-## Perintahnya dijalankan di mana
+Urutannya tidak boleh dibalik: Vercel butuh repo GitHub **dan** alamat basis
+data Supabase, jadi keduanya harus jadi lebih dulu.
 
-**PowerShell** — yang terbuka lewat Start → ketik `powershell`. Semua perintah di
-panduan ini sudah disesuaikan untuknya.
+Akun yang dipakai: **`projectklacomputer-ux`**.
+Rahasia yang perlu ditempel ke Vercel sudah dibuatkan di
+`data/RAHASIA-DEPLOY.txt` (diabaikan git, tidak akan ikut ter-push).
 
-Satu hal yang perlu diketahui: PowerShell di komputer ini versi 5.1, dan versi itu
-**tidak mengenal `&&`** untuk menyambung dua perintah. Kalau Anda menemukan
-tulisan seperti `cd folder && git status` di panduan mana pun, jalankan
-terpisah — baris `cd` dulu, Enter, baru perintah berikutnya. Sudah begitu semua
-di bawah ini.
+---
 
-Pindah ke folder aplikasi cukup **sekali** di awal; PowerShell mengingatnya
-selama jendelanya tidak ditutup:
+## Sebelum mulai — soal PowerShell
+
+Buka lewat Start → ketik `powershell`.
+
+PowerShell di komputer ini versi 5.1, dan versi itu **tidak mengenal `&&`**
+untuk menyambung dua perintah. Semua perintah di bawah sudah dipisah satu-satu:
+ketik, Enter, tunggu selesai, baru baris berikutnya.
+
+Pindah ke folder aplikasi cukup **sekali**; PowerShell mengingatnya selama
+jendelanya tidak ditutup:
 
 ```powershell
 cd "E:\KLA\Claude\EAPEX"
 ```
 
-Semua rahasia yang perlu ditempel ke Vercel sudah dibuatkan di
-`data/RAHASIA-DEPLOY.txt` (berkas itu diabaikan git, tidak akan ikut ter-push).
-
 ---
 
 ## BAGIAN 1 — GitHub
 
-### 1.1 Buat akun
+### 1.1 Buat repo kosong lewat situs
 
-Buka <https://github.com/signup>. Pakai email yang Anda pegang sendiri, bukan
-email bersama. Selesaikan verifikasinya.
+1. Buka <https://github.com>, pastikan yang masuk adalah **`projectklacomputer-ux`**
+   (klik foto profil di kanan atas untuk memastikan).
+2. Tombol **+** di kanan atas → **New repository**.
+3. Isi:
+   - **Owner**: `projectklacomputer-ux`
+   - **Repository name**: `eapex-kla`
+   - **Private** ← wajib. Repo ini memuat nama pegawai, struktur cabang, dan
+     matriks kewenangan persetujuan.
+4. **Jangan centang apa pun** di bagian "Initialize this repository with":
+   tanpa README, tanpa .gitignore, tanpa license.
 
-**Nyalakan 2FA** di Settings → Password and authentication → Two-factor
-authentication. Repo ini berisi seluruh alur persetujuan pengeluaran perusahaan;
-akun tanpa 2FA hanya dijaga satu sandi.
+   > Repo harus benar-benar kosong. Kalau ada satu berkas saja di dalamnya,
+   > dorongan di langkah 1.3 akan **ditolak** karena riwayatnya bentrok.
 
-### 1.2 Sambungkan gh CLI ke akun baru
+5. **Create repository**. Halaman berikutnya menampilkan beberapa perintah —
+   abaikan, pakai yang di panduan ini.
 
-`gh` sudah terpasang di komputer ini (`C:\Program Files\GitHub CLI\gh.exe`) —
-tidak perlu memasang apa pun.
+Sekalian nyalakan **2FA** kalau belum: Settings → Password and authentication.
+Repo ini berisi seluruh alur persetujuan pengeluaran perusahaan.
 
-> **JANGAN jalankan `gh auth logout`.** Di komputer ini sudah ada akun
-> `kristiantokla-arch` (dipakai untuk repo lain). `gh` sanggup memegang
-> beberapa akun sekaligus, jadi akun EAPEX cukup **ditambahkan**, bukan
-> menggantikan. Logout hanya akan memutus akses ke repo yang lain tanpa perlu.
-
-Tambahkan akun EAPEX (pilih **GitHub.com** → **HTTPS** → **Login with a web
-browser**, lalu tempel kode yang muncul di peramban):
-
-```powershell
-gh auth login
-```
-
-Sekarang ada dua akun. Lihat mana yang sedang aktif:
-
-```powershell
-gh auth status
-```
-
-Pindah ke akun EAPEX — ganti `NAMA-AKUN-ANDA` dengan nama akun GitHub Anda:
-
-```powershell
-gh auth switch --user NAMA-AKUN-ANDA
-```
-
-**Yang aktif saat langkah 1.3 dijalankan itulah pemilik repo `eapex-kla`.**
-Pastikan `gh auth status` menunjukkan `Active account: true` di akun yang benar
-sebelum lanjut.
-
-Nanti kalau mau kembali mengurus repo yang lain:
-`gh auth switch --user kristiantokla-arch`
-
-### 1.2b Pastikan nama penulis commit juga akun yang benar
-
-Akun `gh` menentukan **siapa yang mendorong**. Email di dalam commit menentukan
-**siapa yang tercatat sebagai penulis** — dan keduanya bisa berbeda.
-
-Kalau email penulis commit terdaftar di akun lain, GitHub akan menempelkan
-foto dan nama akun itu di setiap commit, walaupun repo-nya milik akun Anda.
-Reponya terpisah, riwayatnya tidak.
-
-Lihat email yang sekarang dipakai repo ini:
-
-```powershell
-git config user.email
-```
-
-Kalau itu bukan email akun EAPEX, setel ulang **khusus repo ini** (tanpa
-`--global`, supaya repo lain tidak ikut berubah):
-
-```powershell
-git config user.name "Nama Anda"
-```
-
-```powershell
-git config user.email "EMAIL-AKUN-EAPEX"
-```
-
-Cara paling aman adalah memakai alamat samaran dari GitHub sehingga email asli
-tidak tersebar di riwayat publik: Settings → Emails → centang **Keep my email
-address private**, lalu salin alamat `…@users.noreply.github.com` di situ.
-
-Commit yang **sudah terlanjur** dibuat tetap memakai email lama. Selama belum
-di-push, penulisnya masih bisa ditulis ulang — minta saya melakukannya.
-
-### 1.3 Buat repo dan dorong isinya
-
-```powershell
-gh repo create eapex-kla --private --source=. --push
-```
-
-`--private` wajib. Repo ini memuat nama pegawai, struktur cabang, dan matriks
-kewenangan persetujuan.
-
-### 1.4 Pastikan tidak ada rahasia yang ikut
+### 1.2 Pastikan tidak ada rahasia yang ikut
 
 ```powershell
 git ls-files -- "data/*" ":!data/**/.gitkeep" ":!data/.gitkeep"
 ```
 
-**Harus kosong.** Kalau ada yang muncul, berhenti — jangan lanjut ke Vercel —
-dan beri tahu saya.
+**Harus kosong.** Kalau ada yang muncul, berhenti — jangan lanjut — dan beri
+tahu saya. Dua berkas `.gitkeep` yang mungkin tampak di daftar lain memang
+sengaja ada dan isinya kosong; gunanya supaya folder `data/` tetap ada setelah
+repo di-clone.
 
-Dua berkas `.gitkeep` sengaja diikutkan dan memang isinya kosong; gunanya hanya
-supaya folder `data/` dan `data/lampiran/` tetap ada setelah repo di-clone.
+### 1.3 Sambungkan repo, lalu dorong
+
+```powershell
+git remote add origin https://projectklacomputer-ux@github.com/projectklacomputer-ux/eapex-kla.git
+```
+
+> Nama akun sengaja disisipkan sebelum `@github.com`. Windows menyimpan
+> kredensial GitHub **satu untuk semua repo**, dan di komputer ini isinya
+> `kristiantokla-arch`. Tanpa sisipan itu, `git push` akan memakai akun tersebut
+> tanpa bertanya apa pun. Dengan sisipan itu, Windows menyimpannya sebagai
+> kredensial terpisah dan kedua akun bisa hidup berdampingan.
+
+```powershell
+git push -u origin main
+```
+
+Sebuah jendela peramban akan muncul meminta izin. **Perhatikan akun yang tertera
+di situ** — kalau yang muncul `kristiantokla-arch`, klik untuk berganti akun ke
+`projectklacomputer-ux` dulu sebelum menyetujui.
+
+### 1.4 Pastikan sudah benar
+
+```powershell
+git remote -v
+```
+
+Lalu buka <https://github.com/projectklacomputer-ux/eapex-kla> — berkasnya harus
+sudah ada, dan ada label **Private** di sebelah nama repo.
+
+Buka juga folder `data/` di situs itu: isinya **hanya** `.gitkeep` dan
+`lampiran/`. Kalau ada `.env`, `AKUN-AWAL.txt`, `.docx`, atau `.db` di sana,
+hapus reponya sekarang juga dan beri tahu saya.
+
+### 1.5 Catatan soal nama penulis commit (boleh dilewati)
+
+Akun GitHub menentukan **siapa yang mendorong**. Email di dalam commit
+menentukan **siapa yang tercatat sebagai penulis** — dan keduanya berjalan
+sendiri-sendiri.
+
+Enam commit yang sudah ada tertulis atas nama
+`KLA Computer <projectklacomputer@gmail.com>`. Commit **berikutnya** sudah saya
+setel memakai alamat samaran akun baru
+(`311638400+projectklacomputer-ux@users.noreply.github.com`), khusus repo ini
+saja — repo lain tidak ikut berubah.
+
+Kalau email `projectklacomputer@gmail.com` itu terdaftar di akun
+`kristiantokla-arch`, keenam commit lama akan menempel nama dan foto akun
+tersebut di riwayat, walaupun reponya milik akun baru. Cara memeriksanya: masuk
+sebagai `projectklacomputer-ux` → Settings → Emails, lihat alamat itu terdaftar
+di situ atau tidak.
+
+Kalau ternyata salah akun dan Anda ingin riwayatnya bersih, **beri tahu saya
+sebelum langkah 1.3** — sesudah ter-push, memperbaikinya jauh lebih repot.
+Kalau tidak dipedulikan, lewati saja bagian ini; tidak ada akibat teknis apa pun.
 
 ---
 
@@ -133,18 +125,17 @@ supaya folder `data/` dan `data/lampiran/` tetap ada setelah repo di-clone.
 
 ### 2.1 Buat project
 
-1. <https://supabase.com> → **Start your project** → masuk pakai akun GitHub tadi.
+1. <https://supabase.com> → **Sign in**.
 2. **New project**
    - Name: `eapex-kla`
-   - Database Password: klik **Generate a password**, lalu **salin dan simpan**.
-     Sandi ini hanya ditampilkan sekali dan dipakai di langkah 2.2.
+   - Database Password: klik **Generate a password**, lalu **salin dan simpan
+     sendiri**. Sandi ini hanya ditampilkan sekali dan dipakai di langkah 2.2.
    - Region: **Southeast Asia (Singapore)** — paling dekat, paling kecil jedanya.
 3. **Create new project**, tunggu ±2 menit sampai statusnya hijau.
 
 ### 2.2 Ambil alamat sambungan
 
-Klik tombol **Connect** di atas → tab **App Frameworks** atau **ORMs** →
-pilih **Transaction pooler**.
+Tombol **Connect** di bagian atas → pilih **Transaction pooler**.
 
 Bentuknya seperti ini:
 
@@ -168,15 +159,22 @@ pertama kali dijalankan.
 
 ## BAGIAN 3 — Vercel
 
-### 3.1 Impor repo
+### 3.1 Beri Vercel akses ke akun GitHub yang benar
 
-1. <https://vercel.com> → **Sign up** → **Continue with GitHub** → izinkan aksesnya.
-2. **Add New… → Project** → pilih `eapex-kla` → **Import**.
-3. Framework Preset: **Other**. Build/Output/Install biarkan kosong —
+1. <https://vercel.com> → **Sign in** → **Continue with GitHub**.
+2. Kalau Vercel sudah pernah tersambung ke `kristiantokla-arch`, repo
+   `eapex-kla` tidak akan muncul di daftar. Buka **Add New… → Project** →
+   **Adjust GitHub App Permissions** → pilih akun `projectklacomputer-ux` →
+   izinkan aksesnya (boleh hanya untuk repo `eapex-kla`).
+
+### 3.2 Impor repo
+
+1. **Add New… → Project** → pilih `eapex-kla` → **Import**.
+2. Framework Preset: **Other**. Build/Output/Install biarkan kosong —
    `vercel.json` di repo sudah mengatur semuanya.
-4. **Jangan klik Deploy dulu.** Buka **Environment Variables** lebih dahulu.
+3. **Jangan klik Deploy dulu.** Buka **Environment Variables** lebih dahulu.
 
-### 3.2 Isi Environment Variables
+### 3.3 Isi Environment Variables
 
 Semuanya untuk **Production, Preview, dan Development** (centang ketiganya).
 
@@ -196,32 +194,32 @@ Tiga baris yang paling gampang terlewat, dan akibatnya:
   seluruh lampiran dokumen lama hilang begitu ada perbaikan kode, tanpa
   pemberitahuan apa pun.
 - **`DI_BELAKANG_PROXY=1`** — tanpa ini cookie sesi tidak ditandai `secure`.
-- **`ADMIN_PASSWORD`** — 27 sandi akun lain ditulis ke berkas di dalam server,
-  dan berkas itu ikut terhapus. Hanya admin yang bisa masuk pertama kali;
-  tanpa sandi ini Anda terkunci di luar sistem sendiri.
+- **`ADMIN_PASSWORD`** — sandi 27 akun lain ditulis ke berkas di dalam server,
+  dan berkas itu ikut terhapus bersama cakramnya. Hanya admin yang bisa masuk
+  pertama kali; tanpa sandi ini Anda terkunci di luar sistem sendiri.
 
-### 3.3 Deploy
+### 3.4 Deploy
 
-Klik **Deploy**, tunggu sampai selesai. Catat alamat yang diberikan, misalnya
+Klik **Deploy**, tunggu selesai. Catat alamat yang diberikan, misalnya
 `https://eapex-kla.vercel.app`.
 
-### 3.4 Satu env terakhir
+### 3.5 Satu env terakhir
 
 Settings → Environment Variables → tambah:
 
 | Nama | Nilai |
 |---|---|
-| `ALAMAT_APLIKASI` | alamat dari langkah 3.3 |
+| `ALAMAT_APLIKASI` | alamat dari langkah 3.4 |
 
 Lalu Deployments → titik tiga pada deploy teratas → **Redeploy**.
 
 Ini dipakai untuk tautan di dalam email dan notifikasi. Tanpa itu notifikasinya
 tetap terkirim, hanya tanpa tombol menuju dokumennya.
 
-### 3.5 Pengingat harian
+### 3.6 Pengingat harian
 
-Sudah diatur di `vercel.json`: `0 3 * * *` UTC = **10.00 WIB**, sesuai permintaan.
-Cek di Settings → Cron Jobs bahwa `/api/pengingat` terdaftar.
+Sudah diatur di `vercel.json`: `0 3 * * *` UTC = **10.00 WIB**, sesuai
+permintaan. Cek di Settings → Cron Jobs bahwa `/api/pengingat` terdaftar.
 
 Kalau `PENGINGAT_SECRET` kosong, alamat pemicunya **mati** — bukan terbuka untuk
 umum.
@@ -242,8 +240,9 @@ umum.
 
 ## Menyusul (belum perlu sekarang)
 
-- `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` — notifikasi email
-- `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` — notifikasi HP, buat dengan `npm run kunci-push`
+- `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` — notifikasi email
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — notifikasi HP, buat dengan
+  `npm run kunci-push`
 - `OPENAI_API_KEY` — tombol "Baca penawaran ini". Sadari: begitu diisi, isi
   berkas penawaran dikirim ke OpenAI. Harga vendor ikut keluar dari kantor.
 
@@ -251,6 +250,9 @@ umum.
 
 | Gejala | Sebabnya biasanya |
 |---|---|
+| Push ditolak, "rejected / fetch first" | Repo GitHub tidak dibuat kosong (ada README) |
+| Push memakai akun yang salah | Nama akun tidak disisipkan di alamat remote (1.3) |
+| Repo `eapex-kla` tidak muncul di Vercel | Izin GitHub App belum diberikan ke akun baru (3.1) |
 | Halaman menggantung, tidak ada galat | `DATABASE_URL` pakai port 5432, bukan 6543 |
 | Lampiran dokumen lama hilang | `SIMPANAN` bukan `db` |
 | Masuk lalu langsung terlempar keluar | `DI_BELAKANG_PROXY` belum `1` |
