@@ -180,10 +180,14 @@ Baik "Tabel terisi di Supabase"
 # --- 7. rapikan --------------------------------------------------------------
 Judul "7. Merapikan"
 
+# Jumlah akun dibaca dari keluaran seed, bukan ditulis kaku — supaya angka yang
+# dilaporkan selalu sama dengan isi basis data walau daftar peran berubah.
+$jmlAkun = if ($teks -match 'Pengguna:\s*(\d+)') { $Matches[1] } else { '?' }
+
 if (Test-Path 'data\AKUN-AWAL.txt') {
   if (Test-Path 'data\AKUN-AWAL-SUPABASE.txt') { Remove-Item 'data\AKUN-AWAL-SUPABASE.txt' }
   Rename-Item 'data\AKUN-AWAL.txt' 'AKUN-AWAL-SUPABASE.txt'
-  Baik "Sandi 28 akun online tersimpan di data\AKUN-AWAL-SUPABASE.txt"
+  Baik "Sandi $jmlAkun akun online tersimpan di data\AKUN-AWAL-SUPABASE.txt"
 } else {
   Write-Host "  [--]  Tidak ada berkas akun baru - tabelnya memang sudah terisi sebelumnya." -ForegroundColor Yellow
 }
@@ -207,5 +211,5 @@ Write-Host "   SUPABASE SELESAI" -ForegroundColor Green
 Write-Host "  ===============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Berikutnya Vercel - tidak perlu PowerShell lagi."
-Write-Host "  Sandi 28 akun online ada di: data\AKUN-AWAL-SUPABASE.txt"
+Write-Host "  Sandi $jmlAkun akun online ada di: data\AKUN-AWAL-SUPABASE.txt"
 Write-Host ""
