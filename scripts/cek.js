@@ -1597,6 +1597,21 @@ async function cekAlur() {
         cek(/^\.env$/m.test(abaikan) && /^data\/\*$/m.test(abaikan),
           '.gitignore memblokir .env dan seluruh isi data/ (repo belum dibuat, diperiksa dari polanya)');
       }
+      // Skrip PowerShell HARUS murni ASCII. PowerShell 5.1 membaca berkas .ps1
+      // tanpa BOM sebagai ANSI; satu em dash saja berubah jadi tiga karakter,
+      // yang terakhir kebetulan tanda kutip tipografis — dan PowerShell
+      // menerimanya sebagai penutup string. Sisa berkasnya lalu diurai sebagai
+      // perintah, dan pesan galatnya menunjuk ke baris yang sama sekali tidak
+      // bersalah. Sudah terjadi DUA KALI di sini.
+      const berkasPs = fsD.readdirSync(P('scripts')).filter(f => f.endsWith('.ps1'));
+      const kotor = berkasPs.filter(f => {
+        const isi = fsD.readFileSync(P('scripts/' + f), 'utf8');
+        return [...isi].some(c => c.charCodeAt(0) > 126);
+      });
+      cek(kotor.length === 0,
+        `${berkasPs.length} skrip PowerShell murni ASCII`
+        + (kotor.length ? ' — BERMASALAH: ' + kotor.join(', ') : ''));
+
       const contohEnv = fsD.readFileSync(P('.env.example'), 'utf8');
       cek(/OPENAI_API_KEY=\s*$/m.test(contohEnv) || /# OPENAI_API_KEY=\s*$/m.test(contohEnv),
         '.env.example memuat OPENAI_API_KEY tanpa nilai sungguhan');
