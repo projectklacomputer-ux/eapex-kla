@@ -100,7 +100,7 @@ class Klien {
   async get(jalur) {
     const r = await fetch(this.dasar + jalur, { headers: this.header, redirect: 'manual' });
     this.simpan(r);
-    return { status: r.status, teks: r.status === 302 ? '' : await r.text() };
+    return { status: r.status, teks: (r.status === 302 || r.status === 303) ? '' : await r.text() };
   }
   async csrf(jalur) {
     const m = /name="_csrf" value="([^"]+)"/.exec((await this.get(jalur)).teks);
@@ -116,7 +116,7 @@ class Klien {
       body: body.toString(),
     });
     this.simpan(r);
-    return { status: r.status, lokasi: r.headers.get('location'), teks: r.status === 302 ? '' : await r.text() };
+    return { status: r.status, lokasi: r.headers.get('location'), teks: (r.status === 302 || r.status === 303) ? '' : await r.text() };
   }
   async postBerkas(jalur, medan, berkas, token) {
     const fd = new FormData();
@@ -125,7 +125,7 @@ class Klien {
     for (const b of berkas) fd.append('berkas', new Blob([b.isi], { type: b.mime }), b.nama);
     const r = await fetch(this.dasar + jalur, { method: 'POST', redirect: 'manual', headers: this.header, body: fd });
     this.simpan(r);
-    return { status: r.status, lokasi: r.headers.get('location'), teks: r.status === 302 ? '' : await r.text() };
+    return { status: r.status, lokasi: r.headers.get('location'), teks: (r.status === 302 || r.status === 303) ? '' : await r.text() };
   }
   async masuk(email, sandi) {
     const t = await this.csrf('/login');
@@ -307,7 +307,7 @@ class Klien {
       ['aksi', 'ajukan'],
     ];
     const rBuat = await sm.postBerkas('/pengajuan', medan, BERKAS_UJI, await sm.csrf('/pengajuan/baru/CAPEX'));
-    cek(rBuat.status === 302, 'dokumen tetap bisa diajukan walau Regional Manager cuti');
+    cek(rBuat.status === 303, 'dokumen tetap bisa diajukan walau Regional Manager cuti');
 
     const dok = await db.get("SELECT * FROM pengajuan WHERE judul = 'Pengadaan AC saat RM cuti'");
     const tahap = await db.all('SELECT * FROM persetujuan WHERE pengajuan_id = ? ORDER BY urut', [dok.id]);
@@ -461,7 +461,7 @@ class Klien {
         [['aksi', 'setuju'], ['lewati_berikut', '1'],
           ['alasan_lewat', 'Sedang cuti, sudah dikonfirmasi lewat telepon']],
         await amL.csrf('/pengajuan/' + d1.id));
-      cek(r2.status === 302, 'melewati tahap dengan alasan diterima');
+      cek(r2.status === 303, 'melewati tahap dengan alasan diterima');
       const t2 = await tahapDari(d1);
       const tRm = t2.find(t => t.peran === 'regional_manager');
       const tAcc = t2.find(t => t.peran === 'accounting');
@@ -576,7 +576,7 @@ class Klien {
         ['cuti_mulai', hari(1)], ['cuti_selesai', hari(4)],
         ['cuti_alasan', 'cuti tahunan'], ['cuti_approve', 'lewati'],
       ], await orang.csrf('/cuti-saya'));
-      cek(rCuti.status === 302, 'cuti tersimpan lewat halaman sendiri');
+      cek(rCuti.status === 303, 'cuti tersimpan lewat halaman sendiri');
       const uOrang = await db.get('SELECT cuti_mulai, cuti_approve FROM pengguna WHERE id = ?', [idOrang]);
       cek(uOrang.cuti_mulai === hari(1) && uOrang.cuti_approve === 'lewati',
         'tanggal dan pilihannya tersimpan apa adanya');
@@ -766,7 +766,7 @@ class Klien {
       ['email_' + idCeo, 'ceo.pribadi@contoh.test'],
       ['email_' + idAm, 'salah-format'],
     ], tokM);
-    cek(rM.status === 302, 'simpan massal diterima');
+    cek(rM.status === 303, 'simpan massal diterima');
     const ceoBaru = await db.nilai('SELECT email_notifikasi FROM pengguna WHERE id = ?', [idCeo]);
     cek(ceoBaru === 'ceo.pribadi@contoh.test', 'alamat yang sah tersimpan');
     const amTetap = await db.nilai('SELECT email_notifikasi FROM pengguna WHERE id = ?', [idAm]);

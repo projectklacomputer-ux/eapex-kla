@@ -98,7 +98,7 @@ const tokenDi = teks => (/name="_csrf" value="([^"]+)"/.exec(teks) || [])[1] || 
   const r1 = await buka(base, '/login', toples);
   const r2 = await kirim(base, '/login',
     { _csrf: tokenDi(r1.teks), tujuan: '/', email: 'sm.smg@kla.co.id', sandi: SANDI }, toples);
-  cek('berhasil masuk', r2.status === 302, 'status ' + r2.status);
+  cek('berhasil masuk', r2.status === 303, 'status ' + r2.status);
 
   console.log('\n\x1b[1mTOKEN TETAP SAMA SEPANJANG SESI\x1b[0m\n');
   const tokA = tokenDi((await buka(base, '/pengajuan/baru/CAPEX', toples)).teks);
@@ -132,7 +132,7 @@ const tokenDi = teks => (/name="_csrf" value="([^"]+)"/.exec(teks) || [])[1] || 
 
   const masukLagi = await kirim(base, '/login',
     { _csrf: tokA, tujuan: '/', email: 'sm.smg@kla.co.id', sandi: SANDI }, toples);
-  cek('masuk lagi memakai token dari halaman lama', masukLagi.status === 302,
+  cek('masuk lagi memakai token dari halaman lama', masukLagi.status === 303,
     'status ' + masukLagi.status);
   const tokSesudah = tokenDi((await buka(base, '/pengajuan/baru/CAPEX', toples)).teks);
   cek('token tetap sama sesudah masuk ulang', tokSesudah === tokA,
@@ -150,6 +150,27 @@ const tokenDi = teks => (/name="_csrf" value="([^"]+)"/.exec(teks) || [])[1] || 
   const silang = await kirim(base, '/notifikasi/dibaca', { _csrf: tokenDi(lain.teks) }, toples);
   cek('token milik peramban lain ditolak', silang.status === 403,
     'kalau diterima, tokennya tidak terikat siapa pun');
+
+  console.log('\n\x1b[1mPENGALIHAN SESUDAH POST HARUS 303\x1b[0m\n');
+  // 302 sesudah POST tidak menjamin apa-apa: peramban BOLEH mengubahnya jadi
+  // GET, tapi tidak wajib. Di Vercel 302 sampai ke peramban sebagai 307, dan
+  // 307 justru MEMPERTAHANKAN metodenya - sehingga sesudah "Masuk" berhasil,
+  // peramban mem-POST ulang ke alamat tujuan dan mendapat 404. 303 tidak punya
+  // celah tafsir itu.
+  const toples2 = buatToples();
+  const awal = await buka(base, '/login', toples2);
+  const masuk303 = await kirim(base, '/login',
+    { _csrf: tokenDi(awal.teks), tujuan: '/', email: 'sm.smg@kla.co.id', sandi: SANDI }, toples2);
+  cek('masuk mengalihkan dengan 303, bukan 302', masuk303.status === 303,
+    'dapat ' + masuk303.status + ' — 302 bisa berubah jadi 307 di hosting');
+  cek('mengarah ke dasbor', masuk303.headers.location === '/', masuk303.headers.location);
+
+  const simpanCuti = await kirim(base, '/cuti-saya',
+    { _csrf: tokenDi((await buka(base, '/cuti-saya', toples2)).teks), cuti_approve: 'tetap' }, toples2);
+  cek('kiriman formulir lain juga 303', simpanCuti.status === 303, 'dapat ' + simpanCuti.status);
+
+  const halamanBiasa = await buka(base, '/pengajuan', toples2);
+  cek('halaman biasa tetap 200 (bukan ikut dialihkan)', halamanBiasa.status === 200);
 
   console.log(`\n\x1b[1m  ${lulus} lulus, ${gagal} gagal\x1b[0m\n`);
   await new Promise(r => server.close(r));

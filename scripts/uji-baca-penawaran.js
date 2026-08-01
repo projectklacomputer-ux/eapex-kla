@@ -150,7 +150,7 @@ class Klien {
   async get(jalur) {
     const r = await fetch(this.dasar + jalur, { headers: this.header, redirect: 'manual' });
     this.simpan(r);
-    return { status: r.status, teks: r.status === 302 ? '' : await r.text() };
+    return { status: r.status, teks: (r.status === 302 || r.status === 303) ? '' : await r.text() };
   }
   async csrf(jalur) {
     const r = await this.get(jalur);
@@ -315,7 +315,7 @@ class Klien {
     jumlahPanggilan = 0;
     const tamu = new Klien(dasar);
     const rTamu = await tamu.bacaPenawaran([{ nama: 'a.pdf', mime: 'application/pdf', isi: Buffer.from('%PDF') }], 'x');
-    cek(rTamu.status === 401 || rTamu.status === 302, 'tanpa login tidak bisa memakai pembaca penawaran');
+    cek(rTamu.status === 401 || rTamu.status === 303 || rTamu.status === 302, 'tanpa login tidak bisa memakai pembaca penawaran');
     cek(jumlahPanggilan === 0, 'permintaan yang ditolak TIDAK sempat memanggil layanan berbayar');
 
     const rJenis = await sm.bacaPenawaran([{ nama: 'jahat.exe', mime: 'application/octet-stream', isi: Buffer.from('MZ') }], tok);

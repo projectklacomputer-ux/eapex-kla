@@ -251,7 +251,7 @@ class Klien {
   async get(jalur) {
     const res = await fetch(this.dasar + jalur, { headers: this.header, redirect: 'manual' });
     this.simpanKue(res);
-    const teks = res.status === 302 ? '' : await res.text();
+    const teks = (res.status === 302 || res.status === 303) ? '' : await res.text();
     return { status: res.status, lokasi: res.headers.get('location'), teks };
   }
   async csrf(jalur) {
@@ -269,7 +269,7 @@ class Klien {
       body: body.toString(),
     });
     this.simpanKue(res);
-    const teks = res.status === 302 ? '' : await res.text();
+    const teks = (res.status === 302 || res.status === 303) ? '' : await res.text();
     return { status: res.status, lokasi: res.headers.get('location'), teks };
   }
   // Kiriman formulir yang membawa berkas (multipart). Dipakai untuk membuktikan
@@ -283,7 +283,7 @@ class Klien {
       method: 'POST', redirect: 'manual', headers: this.header, body: fd,
     });
     this.simpanKue(res);
-    const teks = res.status === 302 ? '' : await res.text();
+    const teks = (res.status === 302 || res.status === 303) ? '' : await res.text();
     return { status: res.status, lokasi: res.headers.get('location'), teks };
   }
   async masuk(email, sandi) {
@@ -396,7 +396,7 @@ async function cekAlur() {
     judul('D. ALUR APPROVAL (CAPEX Store, semua nilai → CEO)');
     const sm = new Klien(dasar);
     const rMasuk = await sm.masuk('sm.smg@kla.co.id', SANDI);
-    cek(rMasuk.status === 302 && rMasuk.lokasi === '/', 'Store Manager berhasil masuk');
+    cek(rMasuk.status === 303 && rMasuk.lokasi === '/', 'Store Manager berhasil masuk');
 
     const katCapex = await kat('CAPEX');
     const aturCapex = await aturanDari('CAPEX', 'store');
@@ -415,7 +415,7 @@ async function cekAlur() {
       ['sales_tambahan', '5.000.000'], ['margin_persen', '18'],
       ['aksi', 'ajukan'],
     ]), BERKAS_UJI, tokenBuat);
-    cek(rBuat.status === 302, 'pengajuan CAPEX terkirim (dialihkan ke halaman dokumen)');
+    cek(rBuat.status === 303, 'pengajuan CAPEX terkirim (dialihkan ke halaman dokumen)');
 
     const doc = await db.get(`SELECT * FROM pengajuan ORDER BY dibuat DESC LIMIT 1`);
     cek(!!doc && doc.status === 'menunggu', 'status dokumen = menunggu');
@@ -944,7 +944,7 @@ async function cekAlur() {
 
     const baru = new Klien(dasar);
     const rMasukBaru = await baru.masuk(emailUji, SANDI);
-    cek(rMasukBaru.status === 302 && rMasukBaru.lokasi === '/ganti-sandi',
+    cek(rMasukBaru.status === 303 && rMasukBaru.lokasi === '/ganti-sandi',
       'login pertama langsung diarahkan ke halaman Ganti Sandi');
 
     const rDasborTertahan = await baru.get('/');
@@ -966,7 +966,7 @@ async function cekAlur() {
       ['item_nama', 'Ads'], ['item_qty', '1'], ['item_harga', '1.000.000'], ['aksi', 'ajukan'],
     ]), BERKAS_UJI, tokenSah);
     const jmlSesudah = Number(await db.nilai('SELECT COUNT(*) AS n FROM pengajuan'));
-    cek(rKirimTertahan.status === 302 && rKirimTertahan.lokasi === '/ganti-sandi' && jmlSesudah === jmlSebelum,
+    cek(rKirimTertahan.status === 303 && rKirimTertahan.lokasi === '/ganti-sandi' && jmlSesudah === jmlSebelum,
       'pengiriman data pun dipantulkan ke Ganti Sandi — tidak ada dokumen yang tercipta');
 
     const halGanti = await baru.get('/ganti-sandi');
@@ -998,7 +998,7 @@ async function cekAlur() {
     cek(masihWajib === 1, 'setelah semua penolakan, statusnya masih wajib ganti sandi');
 
     const rBerhasil = await cobaGanti(SANDI, SANDI_BARU, SANDI_BARU);
-    cek(rBerhasil.status === 302, 'penggantian sandi yang sah diterima');
+    cek(rBerhasil.status === 303, 'penggantian sandi yang sah diterima');
     const sudahGanti = Number(await db.nilai('SELECT wajib_ganti_sandi AS n FROM pengguna WHERE email = ?', [emailUji]));
     cek(sudahGanti === 0, 'penanda "wajib ganti sandi" dicabut setelah diganti');
 
@@ -1009,7 +1009,7 @@ async function cekAlur() {
     const rSandiLama = await lamaTakBisa.masuk(emailUji, SANDI);
     cek(rSandiLama.status === 401, 'sandi lama tidak bisa dipakai lagi');
     const rSandiBaru = await lamaTakBisa.masuk(emailUji, SANDI_BARU);
-    cek(rSandiBaru.status === 302 && rSandiBaru.lokasi === '/', 'sandi baru langsung masuk tanpa dipaksa ganti lagi');
+    cek(rSandiBaru.status === 303 && rSandiBaru.lokasi === '/', 'sandi baru langsung masuk tanpa dipaksa ganti lagi');
 
     // Akun yang baru dibuat Administrator juga harus wajib ganti sandi
     const tBuatUser = await adm.csrf('/admin/pengguna');
@@ -1253,7 +1253,7 @@ async function cekAlur() {
       await db.run('UPDATE pengguna SET wajib_ganti_sandi = 0');
       const smLain = new Klien(dasar);
       const rMasukLain = await smLain.masuk('sm.ygy@kla.co.id', SANDI);
-      cek(rMasukLain.status === 302, 'Store Manager cabang lain berhasil masuk (untuk uji wewenang lampiran)');
+      cek(rMasukLain.status === 303, 'Store Manager cabang lain berhasil masuk (untuk uji wewenang lampiran)');
 
       const smL = new Klien(dasar);
       await smL.masuk('sm.smg@kla.co.id', SANDI);
@@ -1274,7 +1274,7 @@ async function cekAlur() {
       const sebelum = isiDir().length;
       const rL = await smL.postBerkas('/pengajuan',
         medanDasar.concat([['aksi', 'draft']]), [penawaran], tokL);
-      cek(rL.status === 302, 'formulir berisi berkas diterima (multipart)');
+      cek(rL.status === 303, 'formulir berisi berkas diterima (multipart)');
 
       const docL = await db.get(
         `SELECT * FROM pengajuan WHERE judul = 'Pengadaan rak display' ORDER BY dibuat DESC LIMIT 1`);
@@ -1359,7 +1359,7 @@ async function cekAlur() {
       const dokTanpa = await db.get("SELECT * FROM pengajuan WHERE judul = 'Uji isian wajib'");
       cek(!!dokTanpa && dokTanpa.status === 'draft',
         'isian lengkap tapi TANPA lampiran → tidak jadi diajukan, ditahan sebagai draft');
-      cek(rTanpaLampiran.status === 302, 'pemohon dikembalikan ke dokumennya, bukan halaman galat');
+      cek(rTanpaLampiran.status === 303, 'pemohon dikembalikan ke dokumennya, bukan halaman galat');
 
       // 2) ada lampiran tapi isian kurang → ditolak, kolomnya disebut
       const rKurang = await smW.postBerkas('/pengajuan', [
@@ -1378,7 +1378,7 @@ async function cekAlur() {
         ['judul', 'Draft setengah jadi'], ['aksi', 'draft'],
       ], await smW.csrf('/pengajuan/baru/CAPEX'));
       const dokDraft = await db.get("SELECT * FROM pengajuan WHERE judul = 'Draft setengah jadi'");
-      cek(rDraft.status === 302 && !!dokDraft && dokDraft.status === 'draft',
+      cek(rDraft.status === 303 && !!dokDraft && dokDraft.status === 'draft',
         'draft tetap boleh disimpan walau isian belum lengkap dan tanpa lampiran');
 
       // 4) kolom yang SENGAJA tidak wajib tetap boleh nol/kosong
@@ -1388,7 +1388,7 @@ async function cekAlur() {
             ['sales_tambahan', ''], ['margin_persen', ''], ['aksi', 'ajukan']])),
         BERKAS_UJI, await smW.csrf('/pengajuan/baru/CAPEX'));
       const dokNol = await db.get("SELECT status FROM pengajuan WHERE judul = 'Uji kolom boleh nol'");
-      cek(rNol.status === 302 && !!dokNol && dokNol.status === 'menunggu',
+      cek(rNol.status === 303 && !!dokNol && dokNol.status === 'menunggu',
         'ongkos kirim/instalasi/analisa retail boleh nol — nol itu jawaban yang sah');
 
       // 5) baris rincian tanpa harga ditolak
@@ -1418,7 +1418,7 @@ async function cekAlur() {
           .concat([['aksi', 'ajukan']])),
         await smW.csrf('/pengajuan/baru/CAPEX'));
       const dokBebas = await db.get("SELECT status FROM pengajuan WHERE judul = 'Uji lampiran tidak wajib'");
-      cek(rBebas.status === 302 && !!dokBebas && dokBebas.status === 'menunggu',
+      cek(rBebas.status === 303 && !!dokBebas && dokBebas.status === 'menunggu',
         'kewajiban lampiran bisa dimatikan per kategori');
       await db.run('UPDATE kategori SET lampiran_wajib = 1 WHERE id = ?', [katW.id]);
     }
@@ -1455,7 +1455,7 @@ async function cekAlur() {
       }
       const rSimpan = await admA.post('/admin/kategori/aturan/' + aturA.id, medanMatriks,
         await admA.csrf('/admin/kategori'));
-      cek(rSimpan.status === 302, 'perubahan matriks tersimpan');
+      cek(rSimpan.status === 303, 'perubahan matriks tersimpan');
 
       const ceoBaru = await db.get(
         "SELECT min_nominal FROM aturan_langkah WHERE aturan_id = ? AND peran = 'ceo'", [aturA.id]);

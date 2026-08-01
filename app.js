@@ -118,6 +118,30 @@ app.use(session({
   },
 }));
 
+// --------------------------------------------------------------- pengalihan sesudah POST
+// Pengalihan sesudah POST WAJIB memakai 303, bukan 302.
+//
+// Express mengirim 302, dan menurut aturannya peramban boleh — tapi tidak wajib —
+// mengubah POST menjadi GET. Di Vercel, 302 sampai ke peramban sebagai 307, dan
+// 307 justru MEMPERTAHANKAN metodenya. Akibatnya, sesudah "Masuk" berhasil,
+// peramban mem-POST ulang ke alamat tujuan:
+//
+//   POST /login  ->  berhasil  ->  redirect ke '/'  ->  307  ->  POST /  ->  404
+//
+// Orangnya sudah benar-benar masuk (namanya muncul di pojok), hanya langkah
+// terakhirnya gagal — dan pesannya "Halaman tidak ditemukan", yang sama sekali
+// tidak menunjuk ke sebabnya. Tidak pernah muncul di komputer sendiri karena di
+// sana 302 tetap 302.
+//
+// 303 See Other tidak punya celah tafsir: peramban WAJIB memakai GET.
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    const asli = res.redirect.bind(res);
+    res.redirect = (...arg) => (typeof arg[0] === 'number' ? asli(...arg) : asli(303, arg[0]));
+  }
+  next();
+});
+
 // --------------------------------------------------------------- pembantu tampilan
 app.use((req, res, next) => {
   res.locals.rp = util.rp;

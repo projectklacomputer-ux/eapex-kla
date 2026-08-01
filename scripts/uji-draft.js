@@ -118,7 +118,7 @@ const kueHeader = () => [...toples].map(([k, v]) => `${k}=${v}`).join('; ');
   console.log('\n\x1b[1mDRAFT BELUM LENGKAP\x1b[0m\n');
   // jadwal_kebutuhan, penjelasan, justifikasi sengaja dikosongkan
   const a = await simpanDraft({ ...dasar, judul: 'Draft belum lengkap' });
-  cek('draft tetap tersimpan, tidak ditolak', a.simpan.status === 302, 'status ' + a.simpan.status);
+  cek('draft tetap tersimpan, tidak ditolak', a.simpan.status === 303, 'status ' + a.simpan.status);
   cek('pesannya menyatakan BELUM BISA DIAJUKAN', /BELUM BISA DIAJUKAN/.test(a.halaman.teks));
   cek('pesannya menyebut isian yang kurang', /Jadwal kebutuhan/.test(a.halaman.teks));
   cek('tampil sebagai peringatan, bukan hilang diam-diam', /class="pesan ingat/.test(a.halaman.teks));
