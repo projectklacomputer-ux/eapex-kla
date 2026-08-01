@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tidak ada jaringan — EAPEX</title>
+<link rel="stylesheet" href="/css/app.css<%= capAset.css %>">
+<link rel="icon" href="/gambar/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#461866">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EAPEX">
+<link rel="apple-touch-icon" href="/gambar/apple-touch-icon.png">
+</head>
+<!--
+  Halaman ini disimpan di HP oleh service worker dan ditampilkan saat jaringan mati.
+  Sengaja BERDIRI SENDIRI tanpa kerangka aplikasi: tidak memuat nama pengguna,
+  angka, maupun isi dokumen apa pun, supaya tidak ada data yang tertinggal di HP.
+-->
+<body>
+<div class="halaman-masuk">
+  <div class="kotak-masuk" style="text-align:center">
+    <div class="merek">
+      <img class="logo" src="/gambar/logo-kla-lambang.png" alt="KLA Computer">
+      <b>EAPEX</b>
+      <span>Aplikasi Electronic Approval &amp; Capex</span>
+    </div>
+    <p style="font-size:2.4rem; margin:6px 0">📡</p>
+    <h2 style="margin-bottom:8px">Tidak ada jaringan</h2>
+    <p class="lemah" style="font-size:13.5px">
+      EAPEX memerlukan sambungan ke server perusahaan untuk menampilkan dokumen
+      dan menyimpan keputusan approval. Isi dokumen sengaja tidak disimpan di HP
+      demi keamanan data.
+    </p>
+    <p class="lemah" style="font-size:13.5px">
+      Periksa Wi-Fi atau data seluler Anda, lalu coba lagi.
+    </p>
+    <a class="tombol utama" href="/" style="width:100%; justify-content:center; margin-top:6px">Coba Lagi</a>
+  </div>
+</div>
+</body>
+</html>

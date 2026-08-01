@@ -1,0 +1,55 @@
+<%- include('partials/atas') %>
+
+<% if (peranKosong.length) { %>
+  <div class="pesan galat">
+    <b>Perhatian — alur approval bisa macet.</b>
+    Peran berikut dipakai di matriks approval tapi <b>belum punya satu pun pengguna aktif</b>:
+    <ul><% peranKosong.forEach(function (x) { %><li><%= labelPeran(x) %> <code><%= x %></code></li><% }) %></ul>
+    Tambahkan penggunanya di <a href="/admin/pengguna">menu Pengguna</a>. Selama masih kosong, pengajuan yang
+    membutuhkan peran itu <b>ditolak sistem saat diajukan</b> — bukan menggantung tanpa penyetuju.
+  </div>
+<% } else { %>
+  <div class="pesan sukses">Semua peran pada matriks approval sudah punya pengguna aktif.</div>
+<% } %>
+
+<div class="kisi k4">
+  <div class="kpi"><div class="label">Pengguna Aktif</div><div class="nilai"><%= hitungan.pengguna %></div>
+    <div class="bawah"><a href="/admin/pengguna">Kelola →</a></div></div>
+  <div class="kpi"><div class="label">Unit / Cabang</div><div class="nilai"><%= hitungan.cabang %></div>
+    <div class="bawah"><a href="/admin/master">Kelola →</a></div></div>
+  <div class="kpi"><div class="label">Kategori Aktif</div><div class="nilai"><%= hitungan.kategori %></div>
+    <div class="bawah"><a href="/admin/kategori">Matriks approval →</a></div></div>
+  <div class="kpi"><div class="label">Total Dokumen</div><div class="nilai"><%= hitungan.pengajuan %></div>
+    <div class="bawah"><a href="/pengajuan">Lihat semua →</a></div></div>
+</div>
+
+<div class="kartu">
+  <div class="kepala"><h2>Urutan Penyiapan Sistem</h2></div>
+  <div class="badan">
+    <ol style="padding-left:20px; margin:0">
+      <li style="margin-bottom:8px"><b><a href="/admin/master">Master Unit</a></b> — isi Area, Cabang/Store, dan Departemen sesuai kondisi nyata. Kode cabang dipakai pada nomor dokumen.</li>
+      <li style="margin-bottom:8px"><b><a href="/admin/pengguna">Pengguna</a></b> — buat akun tiap pemohon dan penyetuju. Peran menentukan posisinya di alur; cabang/area/departemen menentukan dokumen siapa yang masuk kotak approvalnya.</li>
+      <li style="margin-bottom:8px"><b><a href="/admin/kategori">Matriks Approval</a></b> — periksa rantai approval &amp; ambang nominal, sesuaikan bila kebijakan berubah.</li>
+      <li style="margin-bottom:8px"><b><a href="/admin/pengaturan">Pengaturan</a></b> — nama &amp; alamat perusahaan untuk kop cetakan dan pola penomoran dokumen.</li>
+      <li><b><a href="/admin/jejak">Jejak Audit</a></b> — semua aksi tercatat: login, pembuatan, keputusan approval, perubahan matriks.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="kartu">
+  <div class="kepala"><h2>Catatan Penting</h2></div>
+  <div class="badan">
+    <ul style="padding-left:20px; margin:0">
+      <li style="margin-bottom:6px">Mengubah matriks approval <b>tidak mengubah dokumen yang sedang berjalan</b>.
+          Rantai approval dibekukan saat dokumen diajukan, supaya riwayat persetujuan tetap jujur.</li>
+      <li style="margin-bottom:6px">Ambang nominal bersifat <b>inklusif</b>: bila ambang CEO 1 juta, nominal
+          tepat Rp 1.000.000 <b>sudah</b> memerlukan persetujuan CEO.</li>
+      <li style="margin-bottom:6px">Menyetel ulang sandi seorang pengguna akan <b>mengakhiri semua sesi login</b>
+          yang sedang aktif di aplikasi.</li>
+      <li>Menonaktifkan sebuah kategori hanya menyembunyikannya dari menu Pengajuan Baru;
+          dokumen lama yang memakai kategori itu tetap utuh dan tetap bisa dibuka.</li>
+    </ul>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

@@ -1,0 +1,153 @@
+<%- include('partials/atas') %>
+
+<div class="pesan info">
+  Kode unit dipakai pada nomor dokumen. Contoh: <code>0001/CEA/KLA/SBYM/07/2026</code> —
+  <code>SBYM</code> berasal dari kode cabang, <code>CEA</code> dari jenis dokumen.
+  Unit bertipe <b>Back Office</b> memakai pola <code>HO-&lt;kode departemen&gt;</code>.
+</div>
+
+<!-- ================================================================= AREA -->
+<div class="kartu">
+  <div class="kepala"><h2>Area</h2></div>
+  <div class="badan rapat">
+    <div class="gulir">
+      <table class="data item">
+        <thead><tr><th style="width:120px">Kode</th><th>Nama</th><th style="width:130px">Status</th><th style="width:110px"></th></tr></thead>
+        <tbody>
+          <% master.area.forEach(function (a) { var f = 'fa-' + a.id; %>
+            <tr>
+              <td><input form="<%= f %>" type="text" name="kode" value="<%= a.kode %>" maxlength="20"></td>
+              <td><input form="<%= f %>" type="text" name="nama" value="<%= a.nama %>" maxlength="120"></td>
+              <td>
+                <select form="<%= f %>" name="aktif">
+                  <option value="1" <%= a.aktif ? 'selected' : '' %>>Aktif</option>
+                  <option value="0" <%= !a.aktif ? 'selected' : '' %>>Nonaktif</option>
+                </select>
+              </td>
+              <td><button form="<%= f %>" class="tombol kecil" type="submit">Simpan</button></td>
+            </tr>
+          <% }) %>
+          <tr>
+            <td><input form="fa-baru" type="text" name="kode" placeholder="kode" maxlength="20"></td>
+            <td><input form="fa-baru" type="text" name="nama" placeholder="nama area baru" maxlength="120"></td>
+            <td class="lemah">baru</td>
+            <td><button form="fa-baru" class="tombol kecil utama" type="submit">Tambah</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<% master.area.forEach(function (a) { %>
+  <form id="fa-<%= a.id %>" method="post" action="/admin/master/area" hidden>
+    <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= a.id %>">
+  </form>
+<% }) %>
+<form id="fa-baru" method="post" action="/admin/master/area" hidden>
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+</form>
+
+<!-- ================================================================= CABANG -->
+<div class="kartu">
+  <div class="kepala"><h2>Cabang / Unit</h2></div>
+  <div class="badan rapat">
+    <div class="gulir">
+      <table class="data item">
+        <thead><tr><th style="width:100px">Kode</th><th>Nama</th><th style="width:140px">Tipe</th>
+                   <th style="width:170px">Area</th><th>Alamat</th><th style="width:120px">Status</th><th style="width:110px"></th></tr></thead>
+        <tbody>
+          <% master.cabang.forEach(function (c) { var f = 'fc-' + c.id; %>
+            <tr>
+              <td><input form="<%= f %>" type="text" name="kode" value="<%= c.kode %>" maxlength="20"></td>
+              <td><input form="<%= f %>" type="text" name="nama" value="<%= c.nama %>" maxlength="120"></td>
+              <td>
+                <select form="<%= f %>" name="tipe">
+                  <option value="store" <%= c.tipe === 'store' ? 'selected' : '' %>>Store</option>
+                  <option value="back_office" <%= c.tipe === 'back_office' ? 'selected' : '' %>>Back Office</option>
+                </select>
+              </td>
+              <td>
+                <select form="<%= f %>" name="area_id">
+                  <option value="">—</option>
+                  <% master.area.forEach(function (a) { %>
+                    <option value="<%= a.id %>" <%= c.area_id === a.id ? 'selected' : '' %>><%= a.nama %></option>
+                  <% }) %>
+                </select>
+              </td>
+              <td><input form="<%= f %>" type="text" name="alamat" value="<%= c.alamat || '' %>" maxlength="300"></td>
+              <td>
+                <select form="<%= f %>" name="aktif">
+                  <option value="1" <%= c.aktif ? 'selected' : '' %>>Aktif</option>
+                  <option value="0" <%= !c.aktif ? 'selected' : '' %>>Nonaktif</option>
+                </select>
+              </td>
+              <td><button form="<%= f %>" class="tombol kecil" type="submit">Simpan</button></td>
+            </tr>
+          <% }) %>
+          <tr>
+            <td><input form="fc-baru" type="text" name="kode" placeholder="kode" maxlength="20"></td>
+            <td><input form="fc-baru" type="text" name="nama" placeholder="nama cabang baru" maxlength="120"></td>
+            <td><select form="fc-baru" name="tipe"><option value="store">Store</option><option value="back_office">Back Office</option></select></td>
+            <td><select form="fc-baru" name="area_id"><option value="">—</option>
+              <% master.area.forEach(function (a) { %><option value="<%= a.id %>"><%= a.nama %></option><% }) %>
+            </select></td>
+            <td><input form="fc-baru" type="text" name="alamat" placeholder="alamat" maxlength="300"></td>
+            <td class="lemah">baru</td>
+            <td><button form="fc-baru" class="tombol kecil utama" type="submit">Tambah</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<% master.cabang.forEach(function (c) { %>
+  <form id="fc-<%= c.id %>" method="post" action="/admin/master/cabang" hidden>
+    <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= c.id %>">
+  </form>
+<% }) %>
+<form id="fc-baru" method="post" action="/admin/master/cabang" hidden>
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+</form>
+
+<!-- ================================================================= DEPARTEMEN -->
+<div class="kartu">
+  <div class="kepala"><h2>Departemen (Back Office)</h2></div>
+  <div class="badan rapat">
+    <div class="gulir">
+      <table class="data item">
+        <thead><tr><th style="width:120px">Kode</th><th>Nama</th><th style="width:130px">Status</th><th style="width:110px"></th></tr></thead>
+        <tbody>
+          <% master.departemen.forEach(function (d) { var f = 'fd-' + d.id; %>
+            <tr>
+              <td><input form="<%= f %>" type="text" name="kode" value="<%= d.kode %>" maxlength="20"></td>
+              <td><input form="<%= f %>" type="text" name="nama" value="<%= d.nama %>" maxlength="120"></td>
+              <td>
+                <select form="<%= f %>" name="aktif">
+                  <option value="1" <%= d.aktif ? 'selected' : '' %>>Aktif</option>
+                  <option value="0" <%= !d.aktif ? 'selected' : '' %>>Nonaktif</option>
+                </select>
+              </td>
+              <td><button form="<%= f %>" class="tombol kecil" type="submit">Simpan</button></td>
+            </tr>
+          <% }) %>
+          <tr>
+            <td><input form="fd-baru" type="text" name="kode" placeholder="kode" maxlength="20"></td>
+            <td><input form="fd-baru" type="text" name="nama" placeholder="nama departemen baru" maxlength="120"></td>
+            <td class="lemah">baru</td>
+            <td><button form="fd-baru" class="tombol kecil utama" type="submit">Tambah</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<% master.departemen.forEach(function (d) { %>
+  <form id="fd-<%= d.id %>" method="post" action="/admin/master/departemen" hidden>
+    <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= d.id %>">
+  </form>
+<% }) %>
+<form id="fd-baru" method="post" action="/admin/master/departemen" hidden>
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+</form>
+
+<%- include('partials/bawah') %>

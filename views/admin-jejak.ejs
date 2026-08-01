@@ -1,0 +1,44 @@
+<%- include('partials/atas') %>
+
+<div class="kartu">
+  <div class="kepala"><h2>Jejak Audit</h2>
+    <div class="kanan lemah" style="font-size:12px">300 kejadian terbaru</div>
+  </div>
+  <div class="badan">
+    <form class="saring" method="get" action="/admin/jejak">
+      <div class="medan" style="min-width:280px">
+        <label class="f">Cari nama, aksi, nomor dokumen, atau isi catatan</label>
+        <input type="text" name="cari" value="<%= cari %>" placeholder="mis. setuju, tolak, login-gagal, 0001">
+      </div>
+      <button class="tombol utama" type="submit">Cari</button>
+      <a class="tombol" href="/admin/jejak">Reset</a>
+    </form>
+  </div>
+  <div class="badan rapat">
+    <div class="gulir">
+      <table class="data">
+        <thead><tr><th style="width:150px">Waktu</th><th style="width:160px">Pelaku</th><th style="width:130px">Aksi</th>
+                   <th style="width:170px">Dokumen</th><th>Detail</th><th style="width:120px">IP</th></tr></thead>
+        <tbody>
+          <% if (!daftar.length) { %>
+            <tr><td colspan="6" class="kosong">Belum ada jejak yang cocok.</td></tr>
+          <% } %>
+          <% daftar.forEach(function (j) { %>
+            <tr>
+              <td class="nowrap"><%= tglIndo(j.waktu, true) %></td>
+              <td><%= j.nama || '-' %></td>
+              <td><span class="lencana <%= j.aksi === 'login-gagal' ? 'merah' : (j.aksi === 'setuju' ? 'hijau' : 'abu') %>"><%= j.aksi %></span></td>
+              <td class="nowrap">
+                <% if (j.pengajuan_id) { %><a href="/pengajuan/<%= j.pengajuan_id %>"><%= j.nomor || '(draft)' %></a><% } else { %>-<% } %>
+              </td>
+              <td class="lemah"><%= j.detail || '' %></td>
+              <td class="lemah nowrap"><%= j.ip || '-' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

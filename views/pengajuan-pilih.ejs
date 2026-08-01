@@ -1,0 +1,72 @@
+<%- include('partials/atas') %>
+
+<% if (!adaAkses) { %>
+  <div class="pesan ingat">
+    Peran Anda (<b><%= labelPeran(pengguna.peran) %></b>) belum terdaftar sebagai pemohon pada kategori mana pun.
+    Kalau seharusnya bisa mengajukan, minta Administrator menambahkan peran ini di
+    <b>Admin → Matriks Approval</b>.
+  </div>
+<% } else { %>
+
+<%
+  // Ringkasan aturan tiap kategori, dipakai sebagai keping keterangan di kanan.
+  function metaWilayah(k) {
+    var w = [];
+    k.aturan.forEach(function (a) { if (w.indexOf(WILAYAH[a.wilayah]) < 0) w.push(WILAYAH[a.wilayah]); });
+    return w.join(' / ');
+  }
+  function metaCeo(k) {
+    var ambang = k.aturan.map(function (a) { return a.ambang_ceo; }).filter(Boolean)[0];
+    return ambang ? 'CEO ≥ ' + rp(ambang) : 'CEO semua nilai';
+  }
+  function adaJalurKhusus(k) {
+    return k.aturan.some(function (a) { return !!a.catatan; });
+  }
+%>
+
+<div class="kartu">
+  <div class="badan rapat">
+    <div class="dua-panel">
+
+      <!-- kelompok kategori; di layar sempit bagian ini disembunyikan dan
+           seluruh kelompok ditampilkan berurutan (lihat app.css) -->
+      <div class="panel-kiri" role="tablist" aria-label="Kelompok kategori">
+        <% grup.forEach(function (g, i) { %>
+          <button type="button" class="grup-tombol<%= i === 0 ? ' aktif' : '' %>"
+                  data-grup="<%= i %>" role="tab" aria-selected="<%= i === 0 %>">
+            <span class="ikon-grup"><%= ikonGrup(g.nama) %></span>
+            <span class="nama"><%= g.nama %></span>
+            <span class="jml"><%= g.isi.length %></span>
+          </button>
+        <% }) %>
+      </div>
+
+      <div class="panel-kanan">
+        <% grup.forEach(function (g, i) { %>
+          <div class="isi-grup<%= i === 0 ? '' : ' sembunyi' %>" data-grup="<%= i %>">
+            <div class="judul-grup-hp">
+              <span class="ikon-grup"><%= ikonGrup(g.nama) %></span><%= g.nama %>
+              <span class="jml"><%= g.isi.length %></span>
+            </div>
+            <% g.isi.forEach(function (k) { %>
+              <a class="baris" href="/pengajuan/baru/<%= k.kode %>">
+                <div class="isi-baris">
+                  <b><%= k.nama %></b>
+                  <% if (k.keterangan) { %><div class="ket"><%= k.keterangan %></div><% } %>
+                </div>
+                <span class="cip"><%= metaWilayah(k) %></span>
+                <span class="cip emas"><%= metaCeo(k) %></span>
+                <% if (adaJalurKhusus(k)) { %><span class="cip ungu">2 jalur</span><% } %>
+                <span class="panah">›</span>
+              </a>
+            <% }) %>
+          </div>
+        <% }) %>
+      </div>
+
+    </div>
+  </div>
+</div>
+<% } %>
+
+<%- include('partials/bawah') %>

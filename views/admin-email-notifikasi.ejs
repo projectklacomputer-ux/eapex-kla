@@ -1,0 +1,65 @@
+<%- include('partials/atas') %>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2>Email Notifikasi</h2>
+    <div class="kanan"><a class="tombol kecil" href="/admin/pengguna">← Kembali ke Pengguna</a></div>
+  </div>
+  <div class="badan rapat">
+
+    <div class="petunjuk" style="margin-bottom:14px">
+      Alamat di sini <b>berbeda</b> dari alamat login. Alamat login hanya nama pengguna dan boleh
+      berupa alamat yang tidak punya kotak surat sungguhan; alamat di kolom kanan inilah yang
+      benar-benar dikirimi pemberitahuan approval.
+      <br>
+      <b>Tidak wajib.</b> Yang dikosongkan sekadar tidak menerima email — dia tetap menerima
+      pemberitahuan di dalam aplikasi dan di HP.
+      <% if (!kabarEmail.aktif) { %>
+        <br><br>
+        <b>Pengiriman email belum menyala di server ini.</b> Alamat boleh diisi sekarang, tapi baru
+        terkirim setelah <code>SMTP_HOST</code> dan kawan-kawan diisi di berkas <code>.env</code>.
+      <% } %>
+    </div>
+
+    <form method="post" action="/admin/email-notifikasi">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <div class="gulir">
+        <table class="data">
+          <thead><tr>
+            <th style="width:230px">Nama</th>
+            <th style="width:150px">Peran</th>
+            <th style="width:190px">Alamat login</th>
+            <th>Email untuk notifikasi</th>
+          </tr></thead>
+          <tbody>
+          <% daftar.forEach(function (u) { %>
+            <tr>
+              <td>
+                <b><%= u.nama %></b>
+                <% if (u.cabang_nama) { %><div class="lemah" style="font-size:11.5px"><%= u.cabang_nama %></div><% } %>
+              </td>
+              <td class="lemah" style="font-size:12px"><%= labelPeran(u.peran) %></td>
+              <td class="lemah" style="font-size:12px"><%= u.email %></td>
+              <td>
+                <input type="email" name="email_<%= u.id %>" maxlength="160"
+                  value="<%= u.email_notifikasi || '' %>"
+                  placeholder="kosongkan kalau tidak dikirimi email"
+                  style="width:100%">
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tombol-kirim">
+        <button class="tombol utama" type="submit">Simpan semua</button>
+        <span class="petunjuk" style="margin:0">
+          Yang tidak diubah tidak ditulis ulang. Alamat yang formatnya salah dilewati dan dilaporkan.
+        </span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

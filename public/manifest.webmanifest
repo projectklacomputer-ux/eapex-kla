@@ -1,0 +1,35 @@
+{
+  "name": "EAPEX — Electronic Approval & Capex",
+  "short_name": "EAPEX",
+  "description": "Persetujuan Biaya & CAPEX PT KLA Teknologi Indonesia",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#461866",
+  "theme_color": "#461866",
+  "categories": ["business", "productivity", "finance"],
+  "icons": [
+    { "src": "/gambar/ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/gambar/ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/gambar/ikon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Kotak Approval",
+      "short_name": "Approval",
+      "description": "Dokumen yang menunggu keputusan Anda",
+      "url": "/approval",
+      "icons": [{ "src": "/gambar/ikon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pengajuan Baru",
+      "short_name": "Ajukan",
+      "description": "Buat pengajuan biaya atau CAPEX",
+      "url": "/pengajuan/baru",
+      "icons": [{ "src": "/gambar/ikon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,634 @@
+<%- include('partials/atas') %>
+
+<%
+  var bentuk = kategori.bentuk;
+  var pakaiItem = ['capex', 'barang', 'biaya', 'perjalanan', 'maintenance', 'pindah_area'].indexOf(bentuk) >= 0;
+  // Nomor bagian dihitung berjalan supaya tetap urut walau bagian tertentu
+  // tidak tampil untuk bentuk formulir ini.
+  var noBagian = 0;
+  function bagianBerikut() { noBagian += 1; return noBagian; }
+%>
+
+<% if (galat.length) { %>
+  <div class="pesan galat">
+    <b>Isian belum lengkap:</b>
+    <ul><% galat.forEach(function (g) { %><li><%= g %></li><% }) %></ul>
+  </div>
+<% } %>
+
+<!-- data-wajib: satu-satunya sumber daftar isian wajib adalah lib/formulir.js.
+     Tanda bintang dan atribut required dipasang dari daftar itu oleh app.js,
+     supaya layar dan pemeriksaan server tidak pernah berbeda isi. -->
+<form method="post" action="<%= p ? '/pengajuan/' + p.id : '/pengajuan' %>" enctype="multipart/form-data"
+  data-wajib="<%= Object.keys(wajib).join(',') %>"
+  data-lampiran-wajib="<%= kategori.lampiran_wajib === 0 ? '0' : '1' %>">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <input type="hidden" name="kategori_id" value="<%= kategori.id %>">
+  <input type="hidden" name="aturan_id" value="<%= aturanDipilih.id %>">
+
+  <div class="kartu">
+    <div class="kepala">
+      <h2><%= kategori.nama %></h2>
+      <div class="kanan">
+        <span class="lencana biru"><%= WILAYAH[aturanDipilih.wilayah] %></span>
+        <% if (aturanDipilih.catatan) { %><span class="lencana kuning"><%= aturanDipilih.catatan %></span><% } %>
+      </div>
+    </div>
+
+    <div class="badan rapat" id="wadah-form">
+
+      <!-- Keterangan yang tidak bisa diubah: ditulis sebagai baris keterangan,
+           bukan kotak isian terkunci yang memakan satu baris penuh. -->
+      <div class="info-tetap">
+        <% if (aturanDipilih.wilayah === 'back_office') { %>
+          <span class="butir">Unit: <b><%= (master.cabang[0] && master.cabang[0].nama) || 'Back Office' %></b></span>
+        <% } %>
+        <span class="butir">Jalur: <b><%= WILAYAH[aturanDipilih.wilayah] %></b></span>
+        <span class="butir">Pemohon: <b><%= pengguna.nama %></b></span>
+        <span class="butir">Tanggal: <b><%= tglIndo(p ? p.dibuat : new Date().toISOString()) %></b></span>
+        <% if (p && p.nomor) { %><span class="butir">Nomor: <b><%= p.nomor %></b></span><% } %>
+      </div>
+
+      <!-- =============================================== LAMPIRAN (DI AWAL) -->
+      <!-- Penawaran dilampirkan SEBELUM formulir diisi, bukan sesudah dokumen jadi:
+           berkas inilah sumber angka yang diketik di bawahnya. -->
+      <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Lampiran Penawaran</h3>
+
+        <div class="kotak-unggah" id="kotak-unggah">
+          <input type="file" name="berkas" id="berkas-awal" multiple data-maks-mb="<%= maksLampiranMB %>" data-maks-piksel="2000" data-mutu-gambar="0.85"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.docx,.doc,.csv,.txt"
+            data-medan="Lampiran penawaran"
+            data-bantu="Lampirkan penawaran vendor / quotation di sini lebih dulu — inilah bukti angka yang Anda tulis di bawah. Boleh beberapa berkas sekaligus.">
+          <div class="petunjuk-unggah">
+            <b>Pilih berkas penawaran</b>
+            <span>PDF, gambar, Excel, atau Word — maksimal <%= maksLampiranMB %> MB per berkas, sampai 10 berkas.
+              <b>Foto dari HP dikecilkan sendiri</b> supaya cepat terkirim, tulisannya tetap terbaca.</span>
+          </div>
+          <ul class="daftar-pilihan" id="daftar-pilihan"></ul>
+
+          <% if (pakaiItem) { %>
+            <!-- Pembacaan otomatis. Hasilnya USULAN: ditampilkan dulu di panel
+                 di bawah, baru dimasukkan ke formulir kalau ditekan "Terapkan".
+                 Tombolnya SELALU tampil, juga saat fiturnya belum dinyalakan —
+                 fitur yang tidak kelihatan sama saja tidak ada, dan orang perlu
+                 tahu bahwa ini nanti tidak perlu diketik satu per satu. -->
+            <div class="baris-baca" id="baris-baca">
+              <button type="button" class="tombol emas kecil" id="tombol-baca" disabled
+                data-aktif="<%= locals.aiAktif ? '1' : '0' %>"
+                data-url="/pengajuan/baca-penawaran">✨ Isi otomatis dari penawaran</button>
+              <span class="petunjuk" style="margin:0" id="petunjuk-baca">
+                <% if (locals.aiAktif) { %>
+                  Lampirkan penawarannya dulu, lalu tekan tombol ini — isinya dibaca sendiri
+                  dan ditampilkan untuk Anda periksa. Yang perlu diketik tinggal justifikasi.
+                <% } else { %>
+                  <b>Belum dinyalakan.</b> Nanti tombol ini membaca sendiri isi penawaran —
+                  vendor, daftar barang, jumlah, dan harga — jadi tidak perlu diketik satu per satu.
+                  Minta Administrator mengisi kunci OpenAI untuk menyalakannya.
+                <% } %>
+              </span>
+            </div>
+          <% } %>
+        </div>
+
+        <% if (locals.aiAktif && pakaiItem) { %>
+          <div class="hasil-baca" id="hasil-baca" hidden>
+            <div class="kepala-baca">
+              <b>Hasil pembacaan penawaran</b>
+              <span class="lencana" id="lencana-keyakinan"></span>
+            </div>
+            <div id="peringatan-baca"></div>
+            <div class="ringkas-baca" id="ringkas-baca"></div>
+            <table class="data mini" id="tabel-baca">
+              <thead><tr><th>Uraian</th><th style="width:60px">Qty</th><th style="width:80px">Satuan</th><th style="width:130px" class="angka">Harga (Rp)</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <div class="baris-tombol" style="margin-top:12px">
+              <button type="button" class="tombol utama kecil" data-aksi="terapkan-baca">Terapkan ke formulir</button>
+              <button type="button" class="tombol kecil" data-aksi="abaikan-baca">Abaikan, saya isi sendiri</button>
+              <span class="petunjuk" style="margin:0">Menerapkan akan menimpa rincian yang sudah ada di bagian Rincian &amp; Nilai.</span>
+            </div>
+          </div>
+        <% } %>
+
+        <% if (p && p.lampiran && p.lampiran.length) { %>
+          <div class="lampiran-ada">
+            Sudah terlampir:
+            <% p.lampiran.forEach(function (l) { %>
+              <a class="cip-berkas" href="/pengajuan/<%= p.id %>/lampiran/<%= l.id %>"><%= l.nama_asli %></a>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- =============================================== INFORMASI UMUM -->
+      <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Informasi Umum</h3>
+
+        <div class="kisi k3">
+          <% if (aturan.length > 1) { %>
+            <div class="medan">
+              <label class="f">Jalur pengajuan</label>
+              <select id="pilih-aturan" data-url="/pengajuan/baru/<%= kategori.kode %>" <%= p ? 'disabled' : '' %>
+                data-medan="Jalur pengajuan"
+                data-bantu="Menentukan rantai approval yang dipakai. Tidak bisa diubah setelah dokumen dibuat.">
+                <% aturan.forEach(function (a) { %>
+                  <option value="<%= a.id %>" <%= a.id === aturanDipilih.id ? 'selected' : '' %>>
+                    <%= WILAYAH[a.wilayah] %><%= a.catatan ? ' — ' + a.catatan : '' %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+          <% } %>
+
+          <% if (aturanDipilih.wilayah === 'store') { %>
+            <div class="medan">
+              <label class="f">Cabang / Store <span class="wajib">*</span></label>
+              <select name="cabang_id" required data-medan="Cabang / Store"
+                data-bantu="Cabang yang menanggung biaya ini. Kodenya ikut tercetak pada nomor dokumen, dan menentukan Area Manager yang menyetujui.">
+                <option value="">— pilih cabang —</option>
+                <% master.cabang.forEach(function (c) { %>
+                  <option value="<%= c.id %>" <%= (p ? p.cabang_id : pengguna.cabang_id) === c.id ? 'selected' : '' %>><%= c.nama %> (<%= c.kode %>)</option>
+                <% }) %>
+              </select>
+            </div>
+          <% } else { %>
+            <div class="medan">
+              <label class="f">Departemen <span class="wajib">*</span></label>
+              <select name="departemen_id" required data-medan="Departemen"
+                data-bantu="Departemen pemohon. Kodenya ikut tercetak pada nomor dokumen, mis. HO-ACC.">
+                <option value="">— pilih departemen —</option>
+                <% master.departemen.forEach(function (d) { %>
+                  <option value="<%= d.id %>" <%= (p ? p.departemen_id : pengguna.departemen_id) === d.id ? 'selected' : '' %>><%= d.nama %></option>
+                <% }) %>
+              </select>
+            </div>
+          <% } %>
+
+          <% if (bentuk === 'capex') { %>
+            <div class="medan">
+              <label class="f">Status anggaran</label>
+              <select name="status_anggaran" data-medan="Status anggaran"
+                data-bantu="Budgeted bila sudah masuk anggaran tahun berjalan. Unbudgeted biasanya diperiksa lebih teliti.">
+                <option value="budgeted" <%= (p && p.status_anggaran) === 'budgeted' ? 'selected' : '' %>>Budgeted</option>
+                <option value="unbudgeted" <%= (p && p.status_anggaran) === 'unbudgeted' ? 'selected' : '' %>>Unbudgeted</option>
+              </select>
+            </div>
+            <div class="medan">
+              <label class="f">Nama proyek <span class="wajib">*</span></label>
+              <input type="text" name="nama_proyek" value="<%= data.nama_proyek || '' %>" maxlength="300"
+                placeholder="mis. Peremajaan pendingin kantor" data-medan="Nama proyek"
+                data-bantu="Nama program induknya. Kalau berdiri sendiri, tulis sama dengan perihal.">
+            </div>
+          <% } %>
+        </div>
+
+        <div class="medan">
+          <label class="f">Perihal / Judul pengajuan <span class="wajib">*</span></label>
+          <input type="text" name="judul" required maxlength="300" value="<%= p ? p.judul : '' %>"
+            placeholder="mis. Pengadaan AC 2 PK untuk area kasir" data-medan="Perihal"
+            data-bantu="Satu kalimat singkat. Inilah yang dibaca penyetuju di daftar pengajuan dan di notifikasi HP.">
+        </div>
+      </div>
+
+      <!-- =============================================== BAGIAN KHUSUS -->
+      <% if (bentuk === 'capex') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Tujuan Pengadaan
+          <span class="wajib">*</span></h3>
+          <div class="petunjuk" style="margin:-4px 0 8px">Pilih minimal satu.</div>
+          <div class="kisi k3" style="gap:2px 18px">
+            <% TUJUAN_CAPEX.forEach(function (t) { %>
+              <label class="centang">
+                <input type="checkbox" name="tujuan[]" value="<%= t.kode %>"
+                  <%= (data.tujuan || []).indexOf(t.kode) >= 0 ? 'checked' : '' %>
+                  data-medan="Tujuan pengadaan"
+                  data-bantu="Boleh memilih lebih dari satu. Kalau tidak ada yang cocok, jelaskan di kotak Penjelasan.">
+                <span><%= t.teks %></span>
+              </label>
+            <% }) %>
+          </div>
+          <div class="medan" style="margin-top:10px">
+            <label class="f">Penjelasan tujuan</label>
+            <textarea name="penjelasan" maxlength="4000" data-medan="Penjelasan tujuan"
+              data-bantu="Boleh singkat. Uraian panjang taruh di Justifikasi."><%= data.penjelasan || '' %></textarea>
+          </div>
+        </div>
+
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Detail Aset</h3>
+          <div class="kisi k4">
+            <div class="medan">
+              <label class="f">Kategori aset</label>
+              <select name="kategori_aset" data-medan="Kategori aset"
+                data-bantu="Menentukan kelompok aset di pembukuan dan masa penyusutannya.">
+                <% KATEGORI_ASET.forEach(function (x) { %>
+                  <option value="<%= x %>" <%= data.kategori_aset === x ? 'selected' : '' %>><%= x %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="medan">
+              <label class="f">Lokasi penempatan</label>
+              <input type="text" name="lokasi" value="<%= data.lokasi || '' %>" maxlength="300"
+                placeholder="mis. Ruang kasir lantai 1" data-medan="Lokasi penempatan"
+                data-bantu="Sedetail mungkin — dipakai saat opname aset.">
+            </div>
+            <div class="medan">
+              <label class="f">Vendor / supplier</label>
+              <input type="text" name="vendor" value="<%= data.vendor || '' %>" maxlength="300"
+                placeholder="mis. PT Sejuk Sentosa" data-medan="Vendor"
+                data-bantu="Isi bila sudah ada penawaran. Lampirkan penawarannya setelah draft tersimpan.">
+            </div>
+            <div class="medan">
+              <label class="f">Jadwal dibutuhkan</label>
+              <input type="text" name="jadwal_kebutuhan" value="<%= data.jadwal_kebutuhan || '' %>" maxlength="300"
+                placeholder="mis. September 2026" data-medan="Jadwal dibutuhkan"
+                data-bantu="Kapan aset harus siap dipakai — dasar Purchasing menyusun urutan pembelian.">
+            </div>
+          </div>
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Deskripsi / spesifikasi</label>
+              <textarea name="deskripsi" maxlength="4000" placeholder="Merek, tipe, ukuran, daya"
+                data-medan="Deskripsi"
+                data-bantu="Apa pun yang membedakan dari barang serupa: merek, tipe, kapasitas, garansi."><%= data.deskripsi || '' %></textarea>
+            </div>
+            <div class="medan">
+              <label class="f">Justifikasi pengajuan <span class="wajib">*</span></label>
+              <textarea name="justifikasi" maxlength="4000" placeholder="Kenapa perlu dibeli sekarang?"
+                data-medan="Justifikasi"
+                data-bantu="Paling sering ditanya CEO: dipakai untuk apa, kenapa sekarang, dan apa akibatnya bila ditunda."><%= data.justifikasi || '' %></textarea>
+            </div>
+          </div>
+          <div class="medan">
+            <label class="f">Referensi disposal aset lama <span class="lemah">(bila penggantian)</span></label>
+            <input type="text" name="referensi_disposal" value="<%= data.referensi_disposal || '' %>" maxlength="300"
+              placeholder="mis. 0012/FADA/KLA/SBYM/06/2026" data-medan="Referensi disposal"
+              data-bantu="Diisi hanya bila ini penggantian aset lama. Kosongkan bila pengadaan baru.">
+          </div>
+        </div>
+      <% } %>
+
+      <% if (bentuk === 'barang') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Jalur Pengadaan</h3>
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Cara pengadaan</label>
+              <select name="jalur_pengadaan" data-medan="Cara pengadaan"
+                data-bantu="Sesuai Flow Permintaan Inventaris & Perlengkapan Kantor: lewat Purchasing bila barang belum ada, atau ambil stock bila tersedia di gudang.">
+                <option value="purchasing" <%= data.jalur_pengadaan === 'purchasing' ? 'selected' : '' %>>Lewat Purchasing (PO ke vendor)</option>
+                <option value="stock" <%= data.jalur_pengadaan === 'stock' ? 'selected' : '' %>>Ambil dari stock (pindah gudang HO)</option>
+              </select>
+            </div>
+            <div class="medan">
+              <label class="f">Justifikasi keperluan</label>
+              <textarea name="justifikasi" maxlength="4000" data-medan="Justifikasi"
+                data-bantu="Untuk apa barangnya dipakai dan kenapa perlu sekarang."><%= data.justifikasi || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (bentuk === 'biaya') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Keterangan Biaya</h3>
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Vendor / penerima</label>
+              <input type="text" name="vendor" value="<%= data.vendor || '' %>" maxlength="300"
+                data-medan="Vendor / penerima" data-bantu="Kepada siapa pembayaran ditujukan.">
+            </div>
+            <div class="medan">
+              <label class="f">Periode / tanggal kegiatan</label>
+              <input type="text" name="periode" value="<%= data.periode || '' %>" maxlength="300"
+                placeholder="mis. Agustus 2026" data-medan="Periode"
+                data-bantu="Kapan biaya ini terjadi atau untuk periode apa.">
+            </div>
+          </div>
+          <div class="medan">
+            <label class="f">Penjelasan &amp; justifikasi</label>
+            <textarea name="penjelasan" maxlength="4000" data-medan="Penjelasan"
+              data-bantu="Untuk apa biaya ini dan kenapa perlu dikeluarkan sekarang."><%= data.penjelasan || '' %></textarea>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (bentuk === 'perjalanan') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Rincian Perjalanan</h3>
+          <div class="kisi k4">
+            <div class="medan">
+              <label class="f">Kota / lokasi tujuan</label>
+              <input type="text" name="tujuan_kota" value="<%= data.tujuan_kota || '' %>" maxlength="300"
+                data-medan="Kota tujuan" data-bantu="Kota atau cabang yang dituju.">
+            </div>
+            <div class="medan">
+              <label class="f">Moda transportasi</label>
+              <input type="text" name="moda" value="<%= data.moda || '' %>" maxlength="300"
+                placeholder="mis. mobil kantor / travel" data-medan="Moda transportasi"
+                data-bantu="Mobil kantor, travel, kereta, atau pesawat.">
+            </div>
+            <div class="medan">
+              <label class="f">Tanggal mulai</label>
+              <input type="date" name="tgl_mulai" value="<%= data.tgl_mulai || '' %>"
+                data-medan="Tanggal mulai" data-bantu="Hari pertama perjalanan.">
+            </div>
+            <div class="medan">
+              <label class="f">Tanggal selesai</label>
+              <input type="date" name="tgl_selesai" value="<%= data.tgl_selesai || '' %>"
+                data-medan="Tanggal selesai" data-bantu="Hari terakhir perjalanan. Tidak boleh lebih awal dari tanggal mulai.">
+            </div>
+          </div>
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Peserta / yang diberi tugas</label>
+              <textarea name="peserta" maxlength="4000" data-medan="Peserta"
+                data-bantu="Nama dan jabatan semua yang berangkat."><%= data.peserta || '' %></textarea>
+            </div>
+            <div class="medan">
+              <label class="f">Keperluan perjalanan</label>
+              <textarea name="keperluan" maxlength="4000" data-medan="Keperluan"
+                data-bantu="Apa yang akan dikerjakan di sana dan hasil yang diharapkan."><%= data.keperluan || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (bentuk === 'maintenance') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Rincian Pekerjaan</h3>
+          <div class="kisi k4">
+            <div class="medan">
+              <label class="f">Lokasi pekerjaan</label>
+              <input type="text" name="lokasi" value="<%= data.lokasi || '' %>" maxlength="300"
+                data-medan="Lokasi pekerjaan" data-bantu="Bagian bangunan mana yang dikerjakan.">
+            </div>
+            <div class="medan">
+              <label class="f">Jenis pekerjaan</label>
+              <input type="text" name="jenis_pekerjaan" value="<%= data.jenis_pekerjaan || '' %>" maxlength="300"
+                placeholder="mis. perbaikan bocor atap" data-medan="Jenis pekerjaan"
+                data-bantu="Singkat saja. Uraian panjang taruh di Penjelasan.">
+            </div>
+            <div class="medan">
+              <label class="f">Vendor / tukang</label>
+              <input type="text" name="vendor" value="<%= data.vendor || '' %>" maxlength="300"
+                data-medan="Vendor" data-bantu="Siapa yang mengerjakan. Lampirkan penawarannya bila ada.">
+            </div>
+            <div class="medan">
+              <label class="f">Rencana pengerjaan</label>
+              <input type="date" name="tgl_rencana" value="<%= data.tgl_rencana || '' %>"
+                data-medan="Rencana pengerjaan" data-bantu="Kapan pekerjaan dimulai.">
+            </div>
+          </div>
+          <div class="medan">
+            <label class="f">Penjelasan kerusakan / kebutuhan</label>
+            <textarea name="penjelasan" maxlength="4000" data-medan="Penjelasan"
+              data-bantu="Apa yang rusak, sejak kapan, dan apa akibatnya bila dibiarkan."><%= data.penjelasan || '' %></textarea>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (bentuk === 'refund') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Rincian Refund</h3>
+          <div class="kisi k4">
+            <div class="medan">
+              <label class="f">Nominal refund <span class="wajib">*</span></label>
+              <input type="text" name="nominal" data-uang value="<%= data.nominal || '' %>"
+                data-medan="Nominal refund" data-bantu="Jumlah yang dikembalikan ke pelanggan.">
+            </div>
+            <div class="medan">
+              <label class="f">Nomor nota / referensi</label>
+              <input type="text" name="no_nota" value="<%= data.no_nota || '' %>" maxlength="300"
+                data-medan="Nomor nota" data-bantu="Nomor nota penjualan atau bukti transfer masuk.">
+            </div>
+            <div class="medan">
+              <label class="f">Nama penerima dana <span class="wajib">*</span></label>
+              <input type="text" name="nama_penerima" value="<%= data.nama_penerima || '' %>" maxlength="300"
+                data-medan="Nama penerima" data-bantu="Harus sama dengan nama pemilik rekening tujuan.">
+            </div>
+            <div class="medan">
+              <label class="f">Bank</label>
+              <input type="text" name="bank" value="<%= data.bank || '' %>" maxlength="300"
+                data-medan="Bank" data-bantu="Nama bank rekening tujuan.">
+            </div>
+          </div>
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Nomor rekening tujuan <span class="wajib">*</span></label>
+              <input type="text" name="no_rekening" value="<%= data.no_rekening || '' %>" maxlength="300"
+                data-medan="Nomor rekening"
+                data-bantu="Periksa dua kali terhadap bukti dari pelanggan. Accounting akan memverifikasi sebelum transfer.">
+            </div>
+            <div class="medan">
+              <label class="f">Alasan refund <span class="wajib">*</span></label>
+              <textarea name="alasan" maxlength="4000" data-medan="Alasan refund"
+                data-bantu="Kenapa dana dikembalikan: batal beli, kelebihan bayar, salah transfer, dan sebagainya."><%= data.alasan || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (bentuk === 'pindah_area') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Data Perpindahan</h3>
+          <div class="kisi k4">
+            <div class="medan">
+              <label class="f">Area asal</label>
+              <input type="text" value="<%= pengguna.area_nama || '-' %>" readonly>
+            </div>
+            <div class="medan">
+              <label class="f">Area tujuan <span class="wajib">*</span></label>
+              <select name="area_tujuan_id" required data-medan="Area tujuan"
+                data-bantu="Approval pertama diberikan oleh Area Manager area tujuan, bukan area asal.">
+                <option value="">— pilih area tujuan —</option>
+                <% master.area.forEach(function (a) { %>
+                  <% if (a.id !== pengguna.area_id) { %>
+                    <option value="<%= a.id %>" <%= data.area_tujuan_id === a.id ? 'selected' : '' %>><%= a.nama %></option>
+                  <% } %>
+                <% }) %>
+              </select>
+            </div>
+            <div class="medan">
+              <label class="f">Nama karyawan <span class="wajib">*</span></label>
+              <input type="text" name="nama_karyawan" value="<%= data.nama_karyawan || '' %>" maxlength="300"
+                data-medan="Nama karyawan" data-bantu="Karyawan yang dipindahkan.">
+            </div>
+            <div class="medan">
+              <label class="f">Tanggal pindah</label>
+              <input type="date" name="tgl_pindah" value="<%= data.tgl_pindah || '' %>"
+                data-medan="Tanggal pindah" data-bantu="Kapan perpindahan berlaku.">
+            </div>
+          </div>
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Jabatan karyawan</label>
+              <input type="text" name="jabatan_karyawan" value="<%= data.jabatan_karyawan || '' %>" maxlength="300"
+                data-medan="Jabatan karyawan" data-bantu="Jabatan di area asal.">
+            </div>
+            <div class="medan">
+              <label class="f">Penjelasan</label>
+              <textarea name="penjelasan" maxlength="4000" data-medan="Penjelasan"
+                data-bantu="Alasan perpindahan dan biaya apa saja yang timbul."><%= data.penjelasan || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- =============================================== RINCIAN BIAYA -->
+      <% if (pakaiItem) { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span><%= bentuk === 'capex' ? 'Rincian &amp; Nilai Investasi' : 'Rincian Biaya' %></h3>
+          <div class="gulir">
+            <table class="data item" id="tabel-item">
+              <thead>
+                <tr>
+                  <th style="width:30px">#</th>
+                  <th>Uraian</th>
+                  <th style="width:70px">Qty</th>
+                  <th style="width:90px">Satuan</th>
+                  <th style="width:150px">Harga (Rp)</th>
+                  <th style="width:150px" class="angka">Nominal (Rp)</th>
+                  <th>Keterangan</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% var barisAwal = items.length ? items : [{ nama: '', qty: 1, satuan: 'unit', harga: '', keterangan: '' }]; %>
+                <% barisAwal.forEach(function (it) { %>
+                  <tr>
+                    <td class="no-baris">1.</td>
+                    <td><input type="text" name="item_nama[]" value="<%= it.nama || '' %>" maxlength="300"
+                      data-medan="Uraian barang" data-bantu="Satu baris per jenis barang atau jasa."></td>
+                    <td><input type="text" name="item_qty[]" value="<%= it.qty || 1 %>" inputmode="numeric"
+                      data-medan="Qty" data-bantu="Jumlah unit. Nominal dihitung otomatis qty × harga."></td>
+                    <td><input type="text" name="item_satuan[]" value="<%= it.satuan || 'unit' %>" maxlength="40"
+                      data-medan="Satuan" data-bantu="unit, set, paket, m², dan sejenisnya."></td>
+                    <td><input type="text" name="item_harga[]" data-uang value="<%= it.harga || '' %>"
+                      data-medan="Harga satuan" data-bantu="Harga satuan sebelum ongkos kirim dan pemasangan."></td>
+                    <td class="angka nominal-baris">0</td>
+                    <td><input type="text" name="item_ket[]" value="<%= it.keterangan || '' %>" maxlength="300"
+                      data-medan="Keterangan baris" data-bantu="Catatan singkat per barang, mis. garansi atau warna."></td>
+                    <td class="aksi"><button type="button" class="tombol kecil" data-aksi="hapus-baris" title="Hapus baris">✕</button></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="5" class="kanan">Subtotal</td>
+                  <td class="angka" id="subtotal-item">0</td>
+                  <td colspan="2"></td>
+                </tr>
+                <% if (bentuk === 'capex') { %>
+                  <tr>
+                    <td colspan="5" class="kanan">Pengiriman + Instalasi + Biaya lain</td>
+                    <td class="angka" id="tambahan-item">0</td>
+                    <td colspan="2"></td>
+                  </tr>
+                <% } %>
+                <tr class="baris-total">
+                  <td colspan="5" class="kanan">TOTAL PENGAJUAN</td>
+                  <td class="angka" id="total-pengajuan">Rp 0</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="baris-tombol" style="margin-top:10px">
+            <button type="button" class="tombol kecil" data-aksi="tambah-baris">+ Tambah baris</button>
+            <span class="petunjuk" style="margin:0">Baris tanpa uraian tidak ikut disimpan.</span>
+          </div>
+
+          <template id="contoh-baris">
+            <td class="no-baris"></td>
+            <td><input type="text" name="item_nama[]" maxlength="300" data-medan="Uraian barang" data-bantu="Satu baris per jenis barang atau jasa."></td>
+            <td><input type="text" name="item_qty[]" value="1" inputmode="numeric" data-medan="Qty" data-bantu="Jumlah unit. Nominal dihitung otomatis qty × harga."></td>
+            <td><input type="text" name="item_satuan[]" value="unit" maxlength="40" data-medan="Satuan" data-bantu="unit, set, paket, m², dan sejenisnya."></td>
+            <td><input type="text" name="item_harga[]" data-uang data-medan="Harga satuan" data-bantu="Harga satuan sebelum ongkos kirim dan pemasangan."></td>
+            <td class="angka nominal-baris">0</td>
+            <td><input type="text" name="item_ket[]" maxlength="300" data-medan="Keterangan baris" data-bantu="Catatan singkat per barang, mis. garansi atau warna."></td>
+            <td class="aksi"><button type="button" class="tombol kecil" data-aksi="hapus-baris" title="Hapus baris">✕</button></td>
+          </template>
+
+          <% if (bentuk === 'capex') { %>
+            <div class="kisi k4" style="margin-top:14px">
+              <div class="medan">
+                <label class="f">Pengiriman (Rp)</label>
+                <input type="text" name="pengiriman" data-uang value="<%= data.pengiriman || '' %>"
+                  data-medan="Pengiriman" data-bantu="Ongkos kirim sampai lokasi. Ikut dihitung ke total capex.">
+              </div>
+              <div class="medan">
+                <label class="f">Instalasi (Rp)</label>
+                <input type="text" name="instalasi" data-uang value="<%= data.instalasi || '' %>"
+                  data-medan="Instalasi" data-bantu="Biaya pemasangan oleh vendor atau teknisi.">
+              </div>
+              <div class="medan">
+                <label class="f">Biaya lain (Rp)</label>
+                <input type="text" name="biaya_lain" data-uang value="<%= data.biaya_lain || '' %>"
+                  data-medan="Biaya lain" data-bantu="Mis. perizinan, pengurusan, atau material pendukung.">
+              </div>
+              <div class="medan">
+                <label class="f">Catatan untuk penyetuju</label>
+                <input type="text" name="keterangan" value="<%= p ? (p.keterangan || '') : '' %>" maxlength="4000"
+                  placeholder="Opsional" data-medan="Catatan"
+                  data-bantu="Hal yang perlu diketahui penyetuju tapi bukan bagian dokumen resmi.">
+              </div>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+
+      <!-- =============================================== ANALISA RETAIL -->
+      <% if (bentuk === 'capex' && aturanDipilih.wilayah === 'store') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Analisa Retail</h3>
+          <div class="kisi k4">
+            <div class="medan">
+              <label class="f">Sales tambahan / bulan (Rp)</label>
+              <input type="text" name="sales_tambahan" data-uang value="<%= data.sales_tambahan || '' %>"
+                data-medan="Sales tambahan" data-bantu="Perkiraan tambahan omzet per bulan setelah aset dipakai.">
+            </div>
+            <div class="medan">
+              <label class="f">Margin (%)</label>
+              <input type="text" name="margin_persen" value="<%= data.margin_persen || '' %>" inputmode="decimal"
+                data-medan="Margin" data-bantu="Margin kotor rata-rata cabang. Profit dihitung otomatis dari sini.">
+            </div>
+            <div class="medan">
+              <label class="f">Profit / bulan</label>
+              <input type="text" id="hasil-profit-kotak" value="-" readonly>
+            </div>
+            <div class="medan">
+              <label class="f">Payback &amp; ROI</label>
+              <input type="text" id="hasil-payback-kotak" value="-" readonly>
+            </div>
+          </div>
+          <div style="display:none">
+            <span id="hasil-profit"></span><span id="hasil-payback"></span><span id="hasil-roi"></span>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- =============================================== CATATAN (non-CAPEX) -->
+      <% if (bentuk !== 'capex') { %>
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Catatan</h3>
+          <div class="medan">
+            <label class="f">Catatan untuk penyetuju</label>
+            <textarea name="keterangan" maxlength="4000" placeholder="Opsional" data-medan="Catatan"
+              data-bantu="Hal yang perlu diketahui penyetuju tapi bukan bagian dokumen resmi."><%= p ? (p.keterangan || '') : '' %></textarea>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="tombol-kirim">
+        <!-- Draft sengaja memakai formnovalidate: menyimpan pekerjaan setengah
+             jadi harus selalu boleh. Yang dikunci hanya tombol Ajukan. -->
+        <button class="tombol" type="submit" name="aksi" value="draft" formnovalidate>Simpan Draft</button>
+        <button class="tombol emas" type="submit" name="aksi" value="ajukan"
+          data-aksi="konfirmasi" data-pesan="Kirim pengajuan ini ke penyetuju pertama?">Ajukan Approval</button>
+        <a class="tombol" href="<%= p ? '/pengajuan/' + p.id : '/pengajuan/baru' %>">Batal</a>
+        <span class="petunjuk" style="margin:0 0 0 auto">
+          Semua isian bertanda <span class="wajib">*</span> dan lampiran wajib lengkap sebelum bisa diajukan.
+          Draft boleh disimpan apa adanya.
+        </span>
+      </div>
+
+      <!-- Petunjuk pengisian: menempel di tepi bawah layar, muncul mengikuti
+           isian yang sedang disentuh, lalu hilang sendiri. -->
+      <div class="bar-bantu diam" id="bar-bantu">
+        <span class="ikon">💡</span>
+        <span><span class="nama-medan"></span><span class="isi-bantu"></span></span>
+      </div>
+    </div>
+  </div>
+</form>
+
+<%- include('partials/bawah') %>

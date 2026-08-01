@@ -1,0 +1,241 @@
+<%- include('partials/atas') %>
+
+<% var d = p.data || {}; var bentuk = p.kategori_bentuk; var per = pengaturan || {}; %>
+
+<div class="bilah-cetak tanpa-cetak">
+  <button class="tombol utama" data-aksi="cetak">🖶 Cetak / Simpan PDF</button>
+  <a class="tombol" href="/pengajuan/<%= p.id %>">← Kembali ke dokumen</a>
+</div>
+
+<div class="lembar">
+  <div class="kop">
+    <img class="logo" src="/gambar/logo-kla.png" alt="KLA Computer">
+    <div>
+      <div class="nama"><%= per.nama_perusahaan || 'PT KLA TEKNOLOGI INDONESIA' %></div>
+      <div class="alamat"><%= per.alamat_perusahaan || '' %></div>
+    </div>
+    <div class="kanan">
+      <div>Dicetak: <%= tglIndo(new Date().toISOString(), true) %></div>
+      <div><%= p.cabang_nama || p.departemen_nama || '' %></div>
+    </div>
+  </div>
+
+  <h1><%= p.kategori_nama %></h1>
+  <div class="nomor-dok">
+    No. <b><%= p.nomor || '(draft — belum bernomor)' %></b>
+    &nbsp;·&nbsp; Status: <b><%= labelStatus(p.status).toUpperCase() %></b>
+  </div>
+
+  <h3>A. Informasi Umum</h3>
+  <table class="rinci">
+    <tr><td class="k">Perihal</td><td class="d">:</td><td><b><%= p.judul %></b></td></tr>
+    <% if (bentuk === 'capex') { %>
+      <tr><td class="k">Nama Proyek</td><td class="d">:</td><td><%= d.nama_proyek || '-' %></td></tr>
+    <% } %>
+    <tr><td class="k">Unit / Cabang</td><td class="d">:</td><td><%= p.cabang_nama || '-' %><%= p.departemen_nama ? ' — ' + p.departemen_nama : '' %></td></tr>
+    <tr><td class="k">Wilayah</td><td class="d">:</td><td><%= WILAYAH[p.wilayah] %></td></tr>
+    <tr><td class="k">Nama Pemohon</td><td class="d">:</td><td><%= p.pemohon_nama %></td></tr>
+    <tr><td class="k">Jabatan</td><td class="d">:</td><td><%= p.pemohon_jabatan || labelPeran(p.pemohon.peran) %></td></tr>
+    <tr><td class="k">Tanggal Pengajuan</td><td class="d">:</td><td><%= tglIndo(p.diajukan || p.dibuat) %></td></tr>
+    <% if (p.status_anggaran) { %>
+      <tr><td class="k">Status Anggaran</td><td class="d">:</td><td><%= p.status_anggaran === 'budgeted' ? 'BUDGETED' : 'UNBUDGETED' %></td></tr>
+    <% } %>
+  </table>
+
+  <% if (bentuk === 'capex') { %>
+    <h3>B. Tujuan Pengadaan</h3>
+    <table class="rinci">
+      <% TUJUAN_CAPEX.forEach(function (t) { %>
+        <tr><td colspan="3"><%= (d.tujuan || []).indexOf(t.kode) >= 0 ? '☑' : '☐' %> <%= t.teks %></td></tr>
+      <% }) %>
+      <% if (d.penjelasan) { %>
+        <tr><td class="k">Penjelasan</td><td class="d">:</td><td><%= d.penjelasan %></td></tr>
+      <% } %>
+    </table>
+
+    <h3>C. Detail Aset / Program</h3>
+    <table class="rinci">
+      <tr><td class="k">Kategori Aset</td><td class="d">:</td><td><%= d.kategori_aset || '-' %></td></tr>
+      <tr><td class="k">Lokasi Penempatan</td><td class="d">:</td><td><%= d.lokasi || '-' %></td></tr>
+      <tr><td class="k">Vendor / Supplier</td><td class="d">:</td><td><%= d.vendor || '-' %></td></tr>
+      <tr><td class="k">Jadwal Dibutuhkan</td><td class="d">:</td><td><%= d.jadwal_kebutuhan || '-' %></td></tr>
+      <% if (d.referensi_disposal) { %>
+        <tr><td class="k">Referensi Disposal Aset</td><td class="d">:</td><td><%= d.referensi_disposal %></td></tr>
+      <% } %>
+      <% if (d.deskripsi) { %>
+        <tr><td class="k">Spesifikasi</td><td class="d">:</td><td><%= d.deskripsi %></td></tr>
+      <% } %>
+    </table>
+  <% } %>
+
+  <% if (bentuk === 'barang') { %>
+    <h3>B. Jalur Pengadaan</h3>
+    <table class="rinci">
+      <tr><td colspan="3"><%= d.jalur_pengadaan === 'purchasing' ? '☑' : '☐' %> Lewat Purchasing (PO ke vendor)</td></tr>
+      <tr><td colspan="3"><%= d.jalur_pengadaan === 'stock' ? '☑' : '☐' %> Ambil dari stock (pindah ke gudang HO)</td></tr>
+    </table>
+  <% } %>
+
+  <% if (bentuk === 'biaya') { %>
+    <h3>B. Keterangan Biaya</h3>
+    <table class="rinci">
+      <tr><td class="k">Vendor / Penerima</td><td class="d">:</td><td><%= d.vendor || '-' %></td></tr>
+      <tr><td class="k">Periode</td><td class="d">:</td><td><%= d.periode || '-' %></td></tr>
+      <% if (d.penjelasan) { %><tr><td class="k">Penjelasan</td><td class="d">:</td><td><%= d.penjelasan %></td></tr><% } %>
+    </table>
+  <% } %>
+
+  <% if (bentuk === 'perjalanan') { %>
+    <h3>B. Rincian Perjalanan</h3>
+    <table class="rinci">
+      <tr><td class="k">Kota / Lokasi Tujuan</td><td class="d">:</td><td><%= d.tujuan_kota || '-' %></td></tr>
+      <tr><td class="k">Tanggal</td><td class="d">:</td><td><%= tglIndo(d.tgl_mulai) %> s/d <%= tglIndo(d.tgl_selesai) %></td></tr>
+      <tr><td class="k">Moda Transportasi</td><td class="d">:</td><td><%= d.moda || '-' %></td></tr>
+      <tr><td class="k">Peserta</td><td class="d">:</td><td><%= d.peserta || '-' %></td></tr>
+      <tr><td class="k">Keperluan</td><td class="d">:</td><td><%= d.keperluan || '-' %></td></tr>
+    </table>
+  <% } %>
+
+  <% if (bentuk === 'maintenance') { %>
+    <h3>B. Rincian Pekerjaan</h3>
+    <table class="rinci">
+      <tr><td class="k">Lokasi</td><td class="d">:</td><td><%= d.lokasi || '-' %></td></tr>
+      <tr><td class="k">Jenis Pekerjaan</td><td class="d">:</td><td><%= d.jenis_pekerjaan || '-' %></td></tr>
+      <tr><td class="k">Vendor / Pelaksana</td><td class="d">:</td><td><%= d.vendor || '-' %></td></tr>
+      <tr><td class="k">Rencana Pengerjaan</td><td class="d">:</td><td><%= tglIndo(d.tgl_rencana) %></td></tr>
+      <% if (d.penjelasan) { %><tr><td class="k">Penjelasan</td><td class="d">:</td><td><%= d.penjelasan %></td></tr><% } %>
+    </table>
+  <% } %>
+
+  <% if (bentuk === 'refund') { %>
+    <h3>B. Rincian Refund</h3>
+    <table class="rinci">
+      <tr><td class="k">Nominal Refund</td><td class="d">:</td><td><b><%= rp(d.nominal) %></b></td></tr>
+      <tr><td class="k">Nomor Nota / Referensi</td><td class="d">:</td><td><%= d.no_nota || '-' %></td></tr>
+      <tr><td class="k">Penerima Dana</td><td class="d">:</td><td><%= d.nama_penerima || '-' %></td></tr>
+      <tr><td class="k">Bank / Rekening</td><td class="d">:</td><td><%= d.bank || '' %> <%= d.no_rekening || '-' %></td></tr>
+      <tr><td class="k">Alasan</td><td class="d">:</td><td><%= d.alasan || '-' %></td></tr>
+    </table>
+  <% } %>
+
+  <% if (bentuk === 'pindah_area') { %>
+    <h3>B. Data Perpindahan</h3>
+    <table class="rinci">
+      <tr><td class="k">Nama Karyawan</td><td class="d">:</td><td><%= d.nama_karyawan || '-' %></td></tr>
+      <tr><td class="k">Jabatan</td><td class="d">:</td><td><%= d.jabatan_karyawan || '-' %></td></tr>
+      <tr><td class="k">Tanggal Pindah</td><td class="d">:</td><td><%= tglIndo(d.tgl_pindah) %></td></tr>
+      <% if (d.penjelasan) { %><tr><td class="k">Penjelasan</td><td class="d">:</td><td><%= d.penjelasan %></td></tr><% } %>
+    </table>
+  <% } %>
+
+  <% if (p.items.length) { %>
+    <h3><%= bentuk === 'capex' ? 'D. Nilai Investasi' : 'C. Rincian Biaya' %></h3>
+    <table class="kotak">
+      <thead>
+        <tr>
+          <th style="width:26px">No</th><th>Uraian</th><th style="width:44px">Qty</th>
+          <th style="width:60px">Satuan</th><th style="width:105px">Harga</th><th style="width:110px">Nominal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% var sub = 0; p.items.forEach(function (it, i) { sub += Number(it.nominal || 0); %>
+          <tr>
+            <td><%= i + 1 %></td>
+            <td><%= it.nama %><%= it.keterangan ? ' — ' + it.keterangan : '' %></td>
+            <td style="text-align:right"><%= angka(it.qty) %></td>
+            <td><%= it.satuan || '' %></td>
+            <td style="text-align:right"><%= angka(it.harga) %></td>
+            <td style="text-align:right"><%= angka(it.nominal) %></td>
+          </tr>
+        <% }) %>
+        <tr><td colspan="5" style="text-align:right"><b>Subtotal</b></td><td style="text-align:right"><b><%= angka(sub) %></b></td></tr>
+        <% if (bentuk === 'capex') { %>
+          <tr><td colspan="5" style="text-align:right">Pengiriman</td><td style="text-align:right"><%= angka(d.pengiriman || 0) %></td></tr>
+          <tr><td colspan="5" style="text-align:right">Instalasi</td><td style="text-align:right"><%= angka(d.instalasi || 0) %></td></tr>
+          <tr><td colspan="5" style="text-align:right">Biaya Lain</td><td style="text-align:right"><%= angka(d.biaya_lain || 0) %></td></tr>
+        <% } %>
+        <tr><td colspan="5" style="text-align:right"><b><%= bentuk === 'capex' ? 'TOTAL CAPEX' : 'TOTAL' %></b></td>
+            <td style="text-align:right"><b><%= angka(p.total) %></b></td></tr>
+      </tbody>
+    </table>
+  <% } %>
+
+  <table class="rinci" style="margin-top:8px">
+    <tr><td class="k">Total (dalam huruf)</td><td class="d">:</td><td><i><%= terbilangRupiah(p.total) %></i></td></tr>
+  </table>
+
+  <% if (bentuk === 'capex' && p.wilayah === 'store' && (p.analisa.sales || p.analisa.profit)) { %>
+    <h3>E. Analisa Retail</h3>
+    <table class="rinci">
+      <tr><td class="k">Sales Tambahan / bulan</td><td class="d">:</td><td><%= rp(p.analisa.sales) %></td></tr>
+      <tr><td class="k">Margin</td><td class="d">:</td><td><%= p.analisa.margin %> %</td></tr>
+      <tr><td class="k">Profit / bulan</td><td class="d">:</td><td><%= rp(p.analisa.profit) %></td></tr>
+      <tr><td class="k">Payback Period</td><td class="d">:</td><td><%= p.analisa.payback ? p.analisa.payback + ' bulan' : '-' %></td></tr>
+      <tr><td class="k">ROI</td><td class="d">:</td><td><%= p.analisa.roi ? p.analisa.roi + ' % per tahun' : '-' %></td></tr>
+    </table>
+  <% } %>
+
+  <% if (d.justifikasi || d.keperluan || p.keterangan) { %>
+    <h3>Justifikasi Pengajuan</h3>
+    <div style="white-space:pre-wrap; text-align:justify"><%= d.justifikasi || d.keperluan || '' %></div>
+    <% if (p.keterangan) { %>
+      <div style="white-space:pre-wrap; margin-top:6px"><b>Catatan pemohon:</b> <%= p.keterangan %></div>
+    <% } %>
+  <% } %>
+
+  <h3>Persetujuan</h3>
+  <table class="kotak">
+    <thead>
+      <tr><th style="width:26px">No</th><th>Nama</th><th>Jabatan / Tahap</th><th style="width:88px">Status</th><th style="width:130px">Tanggal</th><th>Catatan</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>0</td>
+        <td><%= p.pemohon_nama %></td>
+        <td>Pemohon — <%= p.pemohon_jabatan || '' %></td>
+        <td>Diajukan</td>
+        <td><%= p.diajukan ? tglIndo(p.diajukan, true) : '-' %></td>
+        <td></td>
+      </tr>
+      <% if (!p.persetujuan.length) { %>
+        <tr><td colspan="6" style="text-align:center; color:#777">Belum masuk alur approval</td></tr>
+      <% } %>
+      <% p.persetujuan.forEach(function (s) { %>
+        <tr>
+          <td><%= s.urut %></td>
+          <td><%= s.aktor_nama || ((s.kandidat || []).map(function (k) { return k.nama; }).join(' / ') || '-') %></td>
+          <td><%= s.aktor_jabatan || s.label %></td>
+          <td><%= labelStatus(s.status).toUpperCase() %></td>
+          <td><%= s.waktu ? tglIndo(s.waktu, true) : '-' %></td>
+          <td><%= s.komentar || '' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <div class="ttd-baris">
+    <div class="ttd-sel">
+      <div class="kotak-ttd"></div>
+      <b><%= p.pemohon_nama %></b>
+      <div class="cap">Diajukan oleh<br><%= p.pemohon_jabatan || '' %></div>
+    </div>
+    <% p.persetujuan.filter(function (s) { return s.status === 'disetujui'; }).forEach(function (s) { %>
+      <div class="ttd-sel">
+        <div class="kotak-ttd" style="font-size:10px; color:#0a6b4c">
+          <div>DISETUJUI SECARA ELEKTRONIK<br><%= tglIndo(s.waktu, true) %></div>
+        </div>
+        <b><%= s.aktor_nama %></b>
+        <div class="cap"><%= s.aktor_jabatan || s.label %></div>
+      </div>
+    <% }) %>
+  </div>
+
+  <div class="kaki-dok">
+    Dokumen ini dihasilkan oleh EAPEX (Electronic Approval &amp; Capex) <%= per.nama_perusahaan || 'PT KLA Teknologi Indonesia' %>.
+    Persetujuan elektronik tercatat lengkap dengan nama, jabatan, tanggal, dan jam pada sistem,
+    sehingga tanda tangan basah tidak diperlukan untuk tahap yang sudah berstatus DISETUJUI.
+    Keaslian dokumen dapat diperiksa dengan nomor <%= p.nomor || '-' %> di aplikasi EAPEX.
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

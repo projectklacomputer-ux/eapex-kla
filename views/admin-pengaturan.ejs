@@ -1,0 +1,40 @@
+<%- include('partials/atas') %>
+
+<% var ket = {
+  nama_perusahaan: 'Nama perusahaan pada kop cetakan.',
+  alamat_perusahaan: 'Alamat pada kop cetakan.',
+  nama_aplikasi: 'Nama aplikasi (tampil di judul halaman).',
+  subjudul_aplikasi: 'Subjudul aplikasi.',
+  reset_nomor: 'Kapan nomor urut dokumen dimulai lagi dari 0001: "tahun" atau "bulan".'
+}; %>
+
+<div class="kartu">
+  <div class="kepala"><h2>Pengaturan Aplikasi</h2></div>
+  <div class="badan">
+    <form method="post" action="/admin/pengaturan">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <% baris.forEach(function (b) { %>
+        <div class="medan">
+          <label class="f"><%= b.kunci.replace(/_/g, ' ') %></label>
+          <input type="text" name="<%= b.kunci %>" value="<%= b.nilai || '' %>" maxlength="500">
+          <% if (ket[b.kunci]) { %><div class="petunjuk"><%= ket[b.kunci] %></div><% } %>
+        </div>
+      <% }) %>
+      <button class="tombol utama" type="submit">Simpan Pengaturan</button>
+    </form>
+  </div>
+</div>
+
+<div class="kartu">
+  <div class="kepala"><h3>Yang TIDAK diatur di sini</h3></div>
+  <div class="badan">
+    <p class="lemah" style="margin:0">
+      Rahasia sistem (kunci sesi, alamat basis data, token Telegram) sengaja tidak bisa diubah dari layar ini.
+      Semuanya dibaca dari variabel lingkungan / berkas <code>.env</code> di server —
+      lihat <code>.env.example</code>. Ini supaya rahasia tidak pernah tersimpan di basis data
+      atau ikut ter-<i>commit</i> ke repositori.
+    </p>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

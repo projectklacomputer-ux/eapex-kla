@@ -1,0 +1,84 @@
+<%- include('partials/atas') %>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2>Notifikasi di HP</h2>
+    <div class="kanan"><span id="status-notifikasi" class="lencana abu">memeriksa…</span></div>
+  </div>
+  <div class="badan">
+    <% if (!pushAktif) { %>
+      <div class="pesan ingat" style="margin-bottom:14px">
+        Notifikasi HP belum disiapkan di server ini. Administrator perlu membuat kunci
+        notifikasi (<code>npm run kunci-push</code>), memasukkannya ke berkas <code>.env</code>,
+        lalu menyalakan ulang aplikasi. Notifikasi juga menuntut alamat <b>HTTPS</b> —
+        di <code>localhost</code> hanya bisa untuk uji coba.
+      </div>
+    <% } %>
+
+    <p style="margin-bottom:12px">
+      Aktifkan supaya HP berbunyi begitu ada dokumen yang menunggu keputusan Anda —
+      tidak perlu membuka aplikasi berkali-kali untuk mengecek.
+      <% if (jumlahPerangkat) { %>
+        <br><span class="lemah">Saat ini aktif di <b><%= jumlahPerangkat %></b> perangkat.</span>
+      <% } %>
+    </p>
+
+    <div id="petunjuk-ios" class="pesan info" style="display:none">
+      <b>Pengguna iPhone / iPad:</b> notifikasi baru bisa diaktifkan setelah aplikasi
+      dipasang ke layar utama. Caranya: ketuk tombol <b>Bagikan</b> di Safari →
+      <b>Add to Home Screen</b> → buka EAPEX dari ikon barunya → kembali ke halaman ini.
+      (Ini aturan Apple, berlaku untuk semua aplikasi web.)
+    </div>
+
+    <div class="baris-tombol">
+      <button class="tombol utama" type="button" id="tombol-notifikasi" disabled>Memeriksa…</button>
+      <button class="tombol" type="button" id="tombol-uji-notifikasi" style="display:none">Kirim notifikasi uji</button>
+    </div>
+    <div class="petunjuk" style="margin-top:9px">
+      Pengaturan ini berlaku <b>per perangkat</b>. Kalau Anda memakai HP dan komputer,
+      aktifkan di keduanya. Isi notifikasi memuat nomor dokumen, perihal, dan nilainya —
+      pesan itu bisa terbaca di layar kunci, jadi aktifkan hanya di perangkat pribadi.
+    </div>
+  </div>
+</div>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2>Riwayat Notifikasi</h2>
+    <div class="kanan">
+      <form method="post" action="/notifikasi/dibaca">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <button class="tombol kecil" type="submit">Tandai semua sudah dibaca</button>
+      </form>
+    </div>
+  </div>
+  <div class="badan rapat">
+    <% if (!daftar.length) { %>
+      <div class="kosong">Belum ada notifikasi.</div>
+    <% } else { %>
+      <div class="gulir">
+        <table class="data">
+          <tbody>
+          <% daftar.forEach(function (n) { %>
+            <tr>
+              <td style="width:36px; text-align:center"><%= n.dibaca ? '' : '🔵' %></td>
+              <td>
+                <b><%= n.judul %></b>
+                <div class="lemah"><%= n.pesan %></div>
+                <div class="lemah" style="font-size:11.5px"><%= tglIndo(n.dibuat, true) %></div>
+              </td>
+              <td class="nowrap kanan">
+                <% if (n.pengajuan_id) { %>
+                  <a class="tombol kecil" href="/pengajuan/<%= n.pengajuan_id %>">Buka dokumen</a>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

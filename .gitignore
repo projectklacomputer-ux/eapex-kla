@@ -1,0 +1,26 @@
+node_modules/
+
+# Rahasia. JANGAN PERNAH masuk repositori.
+.env
+.env.local
+.env.*.local
+
+# ---------------------------------------------------------------------------
+# Seluruh isi data/ adalah keadaan berjalan, bukan kode: basis data, lampiran,
+# catatan sandi awal, dan daftar akun berbentuk Word.
+#
+# Diblokir SELURUHNYA lebih dulu, baru yang memang perlu ikut dibuka satu per
+# satu. Kebalikannya — memblokir satu per satu — sudah pernah nyaris kecolongan:
+# `data/AKUN-AWAL.txt` terdaftar, tapi `data/EAPEX-Akun-Awal.docx` yang isinya
+# sama-sama sandi TIDAK, dan itu baru ketahuan tepat sebelum repo dibuat.
+# ---------------------------------------------------------------------------
+data/*
+!data/.gitkeep
+!data/lampiran/
+data/lampiran/*
+!data/lampiran/.gitkeep
+
+*.log
+.DS_Store
+Thumbs.db
+*.tmp

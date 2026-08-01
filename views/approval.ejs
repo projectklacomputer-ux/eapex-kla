@@ -1,0 +1,75 @@
+<%- include('partials/atas') %>
+
+<div class="kartu">
+  <div class="kepala"><h2>Menunggu Keputusan Anda <span class="lencana kuning"><%= inbox.length %></span></h2></div>
+  <div class="badan rapat">
+    <% if (!inbox.length) { %>
+      <div class="kosong">Tidak ada dokumen yang menunggu keputusan Anda.</div>
+    <% } else { %>
+    <div class="gulir">
+      <table class="data">
+        <thead>
+          <tr><th>Nomor</th><th>Kategori</th><th>Perihal</th><th>Pemohon</th><th>Unit</th>
+              <th class="angka">Nilai</th><th>Tahap</th><th class="angka">Umur</th><th>Keputusan cepat</th></tr>
+        </thead>
+        <tbody>
+        <% inbox.forEach(function (b) { %>
+          <tr>
+            <td class="nowrap"><a href="/pengajuan/<%= b.id %>"><%= b.nomor %></a></td>
+            <td><%= b.kategori_nama %></td>
+            <td><a href="/pengajuan/<%= b.id %>"><%= b.judul %></a></td>
+            <td><%= b.pemohon_nama %></td>
+            <td><%= b.cabang_nama || b.departemen_nama || '-' %></td>
+            <td class="angka tebal"><%= rp(b.total) %></td>
+            <td><span class="lencana biru"><%= b.langkah_label %></span></td>
+            <td class="angka"><%= selisihHari(b.diajukan) %> hr</td>
+            <td>
+              <form method="post" action="/pengajuan/<%= b.id %>/putuskan" class="baris-tombol">
+                <input type="hidden" name="_csrf" value="<%= csrf %>">
+                <input type="hidden" name="kembali" value="approval">
+                <input type="hidden" name="aksi" value="setuju">
+                <button class="tombol kecil hijau" type="submit" data-aksi="konfirmasi"
+                  data-pesan="Setujui <%= b.nomor %> sebesar <%= rp(b.total) %>?">Setujui</button>
+                <a class="tombol kecil" href="/pengajuan/<%= b.id %>">Periksa dulu</a>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="kartu">
+  <div class="kepala"><h2>Riwayat Keputusan Anda</h2></div>
+  <div class="badan rapat">
+    <% if (!riwayat.length) { %>
+      <div class="kosong">Belum ada keputusan yang Anda buat.</div>
+    <% } else { %>
+    <div class="gulir">
+      <table class="data">
+        <thead><tr><th>Waktu</th><th>Nomor</th><th>Perihal</th><th class="angka">Nilai</th>
+                   <th>Tahap</th><th>Keputusan</th><th>Status Akhir</th><th>Catatan</th></tr></thead>
+        <tbody>
+        <% riwayat.forEach(function (b) { %>
+          <tr>
+            <td class="nowrap"><%= tglIndo(b.waktu, true) %></td>
+            <td class="nowrap"><a href="/pengajuan/<%= b.id %>"><%= b.nomor %></a></td>
+            <td><%= b.judul %></td>
+            <td class="angka"><%= rp(b.total) %></td>
+            <td><%= b.langkah_label %></td>
+            <td><span class="lencana <%= b.keputusan === 'disetujui' ? 'hijau' : (b.keputusan === 'ditolak' ? 'merah' : 'oranye') %>"><%= labelStatus(b.keputusan) || b.keputusan %></span></td>
+            <td><span class="lencana <%= warnaStatus(b.status) %>"><%= labelStatus(b.status) %></span></td>
+            <td class="lemah"><%= b.komentar || '-' %></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

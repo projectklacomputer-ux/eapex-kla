@@ -1,0 +1,307 @@
+<%- include('partials/atas') %>
+
+<%
+  // Nomor bagian dihitung berjalan supaya tetap urut walau bagian tertentu
+  // (mis. Cuti) hanya muncul saat mengubah pengguna yang sudah ada.
+  var noBagian = 0;
+  function bagianBerikut() { noBagian += 1; return noBagian; }
+  var modeCutiKini = ubah ? (ubah.cuti_approve || 'tetap') : 'tetap';
+%>
+
+<% if (sandiBaru) { %>
+  <div class="pesan ingat">
+    <b>Sandi awal untuk <%= emailSandiBaru %>:</b>
+    <code style="font-size:15px"><%= sandiBaru %></code><br>
+    Catat sekarang — sandi ini <b>tidak ditampilkan lagi</b>. Sampaikan langsung ke pemiliknya;
+    sistem akan memaksa penggantian sandi saat login pertama.
+  </div>
+<% } %>
+
+<% if (!ubah && tanpaEmailNotif > 0) { %>
+  <div class="pesan ingat">
+    <b><%= tanpaEmailNotif %> dari <%= jmlAktif %> akun belum punya alamat email notifikasi</b> —
+    mereka tidak akan menerima pemberitahuan approval lewat email.
+    <a href="/admin/email-notifikasi">Isi sekaligus di satu halaman →</a>
+  </div>
+<% } %>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2><%= ubah ? 'Ubah Pengguna — ' + ubah.nama : 'Tambah Pengguna' %></h2>
+    <div class="kanan">
+      <% if (ubah) { %>
+        <a class="tombol kecil" href="/admin/pengguna">+ Tambah baru</a>
+      <% } %>
+      <a class="tombol kecil" href="/admin/email-notifikasi">Isi email massal</a>
+    </div>
+  </div>
+
+  <div class="badan rapat" id="wadah-form">
+
+    <% if (ubah) { %>
+      <div class="info-tetap">
+        <span class="butir">Login terakhir: <b><%= ubah.login_terakhir ? tglIndo(ubah.login_terakhir, true) : 'belum pernah' %></b></span>
+        <span class="butir">Sandi: <b><%= ubah.wajib_ganti_sandi ? 'masih sandi awal' : 'sudah diganti sendiri' %></b></span>
+        <span class="butir">Status: <b><%= ubah.aktif ? 'aktif' : 'nonaktif' %></b></span>
+        <% if (sedangCuti(ubah, hariIni)) { %>
+          <span class="butir">Cuti: <b><%= tglSingkat(ubah.cuti_mulai) %>–<%= tglSingkat(ubah.cuti_selesai) %></b></span>
+        <% } %>
+      </div>
+    <% } %>
+
+    <form method="post" action="/admin/pengguna">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <% if (ubah) { %><input type="hidden" name="id" value="<%= ubah.id %>"><% } %>
+
+      <!-- =============================================== IDENTITAS -->
+      <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Identitas &amp; Peran</h3>
+        <div class="kisi k2">
+          <div class="medan">
+            <label class="f">Nama lengkap <span class="wajib">*</span></label>
+            <input type="text" name="nama" value="<%= ubah ? ubah.nama : '' %>" required maxlength="120"
+              data-medan="Nama lengkap"
+              data-bantu="Nama yang tercetak pada dokumen approval. Tulis seperti di data kepegawaian.">
+          </div>
+          <div class="medan">
+            <label class="f">Jabatan <span class="lemah">(tampil di cetakan)</span></label>
+            <input type="text" name="jabatan" value="<%= ubah ? (ubah.jabatan || '') : '' %>" maxlength="120"
+              placeholder="mis. Store Manager Surabaya Merr"
+              data-medan="Jabatan"
+              data-bantu="Ditulis di bawah nama pada lembar approval yang dicetak.">
+          </div>
+        </div>
+
+        <div class="kisi k2">
+          <div class="medan">
+            <label class="f">Email untuk login <span class="wajib">*</span></label>
+            <input type="email" name="email" value="<%= ubah ? ubah.email : '' %>" required maxlength="160"
+              data-medan="Email untuk login"
+              data-bantu="Dipakai sebagai nama pengguna saat masuk. Boleh alamat yang tidak punya kotak surat sungguhan.">
+            <div class="petunjuk">Hanya untuk masuk. Tidak harus alamat yang bisa menerima surat.</div>
+          </div>
+          <div class="medan">
+            <label class="f">Peran <span class="wajib">*</span></label>
+            <select name="peran" required data-medan="Peran"
+              data-bantu="Menentukan posisi orang ini di matriks approval. Salah peran = dokumen mendarat di orang yang keliru.">
+              <% Object.keys(PERAN).forEach(function (k) { %>
+                <% if (!PERAN[k].riwayat || (ubah && ubah.peran === k)) { %>
+                  <option value="<%= k %>" <%= ubah && ubah.peran === k ? 'selected' : '' %>><%= PERAN[k].label %></option>
+                <% } %>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- =============================================== PEMBERITAHUAN -->
+      <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Pemberitahuan</h3>
+        <div class="medan">
+          <label class="f">Email untuk notifikasi <span class="lemah">(tidak wajib)</span></label>
+          <input type="email" name="email_notifikasi" maxlength="160"
+            value="<%= ubah ? (ubah.email_notifikasi || '') : '' %>"
+            placeholder="alamat yang benar-benar dibaca orangnya"
+            data-medan="Email untuk notifikasi"
+            data-bantu="Alamat tujuan pemberitahuan approval. Kosongkan kalau orangnya tidak perlu dikirimi email.">
+          <div class="petunjuk">
+            Berbeda dari alamat login di atas. Dikosongkan pun tidak apa-apa — dia tetap menerima
+            pemberitahuan di dalam aplikasi dan di HP.
+            <% if (!kabarEmail.aktif) { %>
+              <br><b>Catatan:</b> pengiriman email belum menyala di server ini (SMTP belum diisi),
+              jadi kolom ini belum berpengaruh.
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- =============================================== PENEMPATAN -->
+      <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Penempatan</h3>
+        <div class="petunjuk" style="margin:-4px 0 12px">
+          Menentukan dokumen siapa yang masuk kotak approval orang ini.
+          Kosongkan ketiganya untuk peran kantor pusat yang melayani semua unit
+          (CEO, Accounting, Regional Manager).
+        </div>
+        <div class="kisi k4">
+          <div class="medan">
+            <label class="f">Cabang / Unit</label>
+            <select name="cabang_id" data-medan="Cabang / Unit"
+              data-bantu="Cabang tempat orang ini bekerja. Kosongkan untuk peran kantor pusat.">
+              <option value="">— tidak terikat cabang —</option>
+              <% master.cabang.forEach(function (c) { %>
+                <option value="<%= c.id %>" <%= ubah && ubah.cabang_id === c.id ? 'selected' : '' %>>
+                  <%= c.nama %> (<%= c.kode %>)<%= c.tipe === 'back_office' ? ' — Back Office' : '' %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="medan">
+            <label class="f">Area <span class="lemah">(Area Manager)</span></label>
+            <select name="area_id" data-medan="Area"
+              data-bantu="Wajib untuk Area Manager — inilah yang menentukan cabang mana saja yang dokumennya masuk ke dia.">
+              <option value="">— tidak terikat area —</option>
+              <% master.area.forEach(function (a) { %>
+                <option value="<%= a.id %>" <%= ubah && ubah.area_id === a.id ? 'selected' : '' %>><%= a.nama %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="medan">
+            <label class="f">Departemen <span class="lemah">(Back Office)</span></label>
+            <select name="departemen_id" data-medan="Departemen"
+              data-bantu="Untuk staf & manajer kantor pusat. Menentukan siapa Leader/Manager yang menyetujui pengajuannya.">
+              <option value="">— tidak terikat departemen —</option>
+              <% master.departemen.forEach(function (d) { %>
+                <option value="<%= d.id %>" <%= ubah && ubah.departemen_id === d.id ? 'selected' : '' %>><%= d.nama %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="medan">
+            <label class="f">Status akun</label>
+            <select name="aktif" data-medan="Status akun"
+              data-bantu="Akun nonaktif tidak bisa masuk dan tidak pernah dipilih sebagai penyetuju.">
+              <option value="1" <%= !ubah || ubah.aktif ? 'selected' : '' %>>Aktif</option>
+              <option value="0" <%= ubah && !ubah.aktif ? 'selected' : '' %>>Tidak aktif</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="tombol-kirim">
+        <button class="tombol utama" type="submit"><%= ubah ? 'Simpan Perubahan' : 'Tambah Pengguna' %></button>
+        <% if (ubah) { %><a class="tombol" href="/admin/pengguna">Batal</a><% } %>
+        <% if (!ubah) { %>
+          <span class="petunjuk" style="margin:0">Sandi awal dibuat otomatis dan ditampilkan sekali setelah tersimpan.</span>
+        <% } %>
+      </div>
+    </form>
+
+    <% if (ubah) { %>
+      <!-- =============================================== CUTI -->
+      <!-- Formulir TERPISAH dari data pengguna: menandai cuti punya akibat lain
+           (tahap approval bisa dilewati), jadi tidak boleh ikut tersimpan
+           diam-diam saat orang sekadar membetulkan jabatan. -->
+      <form method="post" action="/admin/pengguna/<%= ubah.id %>/cuti">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Cuti / Berhalangan</h3>
+          <div class="petunjuk" style="margin:-4px 0 12px">
+            <b>Cuti tidak otomatis berarti tahapnya dilewati.</b> Orang cuti sering masih bisa
+            membuka HP dan menekan setuju. Yang menentukan bukan "sedang cuti", tapi sanggup
+            atau tidak dia menangani approval selama tanggal itu — pilih di kolom ketiga.
+          </div>
+
+          <div class="kisi k3">
+            <div class="medan">
+              <label class="f">Mulai</label>
+              <input type="date" name="cuti_mulai" value="<%= ubah.cuti_mulai || '' %>"
+                data-medan="Cuti mulai" data-bantu="Hari pertama cuti. Ikut terhitung.">
+            </div>
+            <div class="medan">
+              <label class="f">Selesai</label>
+              <input type="date" name="cuti_selesai" value="<%= ubah.cuti_selesai || '' %>"
+                data-medan="Cuti selesai" data-bantu="Hari terakhir cuti, ikut terhitung. Wajib diisi — cuti tanpa ujung akan terlupakan.">
+            </div>
+            <div class="medan">
+              <label class="f">Selama cuti, approval-nya <span class="wajib">*</span></label>
+              <select name="cuti_approve" id="pilih-mode-cuti"
+                data-medan="Perlakuan approval selama cuti"
+                data-bantu="Pilih sesuai keadaan: masih sanggup, dialihkan ke orang lain, atau tahapnya dilewati.">
+                <option value="tetap" <%= modeCutiKini === 'tetap' ? 'selected' : '' %>>
+                  Tetap dia yang menyetujui — masih bisa handle</option>
+                <option value="pengganti" <%= modeCutiKini === 'pengganti' ? 'selected' : '' %>>
+                  Dialihkan ke pengganti</option>
+                <option value="lewati" <%= modeCutiKini === 'lewati' ? 'selected' : '' %>>
+                  Menyatakan tidak bisa menyetujui</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Pengganti <span class="lemah">(wajib bila dialihkan)</span></label>
+              <select name="pengganti_id" data-medan="Pengganti"
+                data-bantu="Orang yang menyetujui menggantikan dia. Lebih aman daripada melewati tahapnya — kontrolnya tidak hilang, hanya berpindah tangan.">
+                <option value="">— belum dipilih —</option>
+                <% daftar.filter(function (x) { return x.aktif && x.id !== ubah.id; }).forEach(function (x) { %>
+                  <option value="<%= x.id %>" <%= ubah.pengganti_id === x.id ? 'selected' : '' %>>
+                    <%= x.nama %> — <%= labelPeran(x.peran) %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="medan">
+              <label class="f">Keterangan</label>
+              <input type="text" name="cuti_alasan" maxlength="200" value="<%= ubah.cuti_alasan || '' %>"
+                placeholder="mis. cuti tahunan, dinas luar, sakit"
+                data-medan="Keterangan cuti"
+                data-bantu="Ikut tercatat di dokumen yang tahapnya dilewati, supaya alasannya bisa ditelusuri.">
+            </div>
+          </div>
+
+          <div class="tombol-kirim">
+            <button class="tombol utama" type="submit">Simpan cuti</button>
+            <% if (ubah.cuti_mulai) { %>
+              <button class="tombol" type="submit" name="cuti_mulai" value="" data-aksi="konfirmasi"
+                data-pesan="Hapus catatan cuti <%= ubah.nama %>?">Hapus cuti</button>
+            <% } %>
+          </div>
+        </div>
+      </form>
+    <% } %>
+  </div>
+</div>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2>Daftar Pengguna <span class="lemah">(<%= daftar.length %>)</span></h2>
+    <div class="kanan">
+      <span class="lencana <%= tanpaEmailNotif ? 'kuning' : 'hijau' %>">
+        <%= jmlAktif - tanpaEmailNotif %>/<%= jmlAktif %> punya email notifikasi
+      </span>
+    </div>
+  </div>
+  <div class="badan rapat">
+    <div class="gulir">
+      <table class="data">
+        <thead><tr>
+          <th>Nama</th><th>Peran</th><th>Penempatan</th>
+          <th>Email notifikasi</th><th>Login terakhir</th><th></th>
+        </tr></thead>
+        <tbody>
+        <% daftar.forEach(function (u) { %>
+          <tr>
+            <td>
+              <b><%= u.nama %></b>
+              <% if (!u.aktif) { %><span class="lencana abu">nonaktif</span><% } %>
+              <% if (u.wajib_ganti_sandi) { %><span class="lencana kuning">sandi awal</span><% } %>
+              <% if (sedangCuti(u, hariIni)) { %>
+                <span class="lencana <%= (u.cuti_approve || 'tetap') === 'tetap' ? 'biru' : 'oranye' %>">
+                  cuti s/d <%= tglSingkat(u.cuti_selesai) %><%= (u.cuti_approve || 'tetap') === 'tetap' ? ' · tetap approve' : ((u.cuti_approve === 'pengganti') ? ' · dialihkan' : ' · dilewati') %>
+                </span>
+              <% } %>
+              <div class="lemah" style="font-size:11.5px"><%= u.email %></div>
+            </td>
+            <td><%= labelPeran(u.peran) %></td>
+            <td class="lemah" style="font-size:12px">
+              <%= [u.cabang_nama, u.area_nama, u.departemen_nama].filter(Boolean).join(' · ') || 'Kantor pusat / semua unit' %>
+            </td>
+            <td style="font-size:12px">
+              <% if (u.email_notifikasi) { %>
+                <%= u.email_notifikasi %>
+              <% } else { %>
+                <span class="lemah">— belum diisi —</span>
+              <% } %>
+            </td>
+            <td class="lemah" style="font-size:12px"><%= u.login_terakhir ? tglIndo(u.login_terakhir, true) : 'belum pernah' %></td>
+            <td class="nowrap">
+              <a class="tombol kecil" href="/admin/pengguna?ubah=<%= u.id %>">Ubah</a>
+              <form method="post" action="/admin/pengguna/<%= u.id %>/reset-sandi" style="display:inline">
+                <input type="hidden" name="_csrf" value="<%= csrf %>">
+                <button class="tombol kecil" type="submit" data-aksi="konfirmasi"
+                  data-pesan="Setel ulang sandi <%= u.nama %>? Semua sesi login akan berakhir.">Reset sandi</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

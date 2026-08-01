@@ -1,0 +1,112 @@
+<%- include('partials/atas') %>
+
+<div class="pesan info">
+  Matriks ini sumbernya <b>List Of Approval KLA</b>. Urutan langkah = urutan approval.
+  Kolom <b>Ambang</b> membuat langkah hanya wajib bila total pengajuan <b>≥</b> nominal tersebut
+  (kosong = selalu wajib). Perubahan di sini <b>tidak</b> mengubah dokumen yang sedang berjalan.
+</div>
+
+<% isi.forEach(function (k) { %>
+  <div class="kartu">
+    <div class="kepala">
+      <h2><%= k.nama %></h2>
+      <div class="kanan">
+        <span class="lencana abu"><%= k.grup %></span>
+        <span class="lencana biru"><%= BENTUK[k.bentuk] || k.bentuk %></span>
+        <span class="lencana <%= k.aktif ? 'hijau' : 'merah' %>"><%= k.aktif ? 'aktif' : 'nonaktif' %></span>
+        <form method="post" action="/admin/kategori/<%= k.id %>/aktif" style="display:inline">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <input type="hidden" name="aktif" value="<%= k.aktif ? '0' : '1' %>">
+          <button class="tombol kecil" type="submit"><%= k.aktif ? 'Nonaktifkan' : 'Aktifkan' %></button>
+        </form>
+      </div>
+    </div>
+    <div class="badan">
+      <div class="lemah" style="font-size:12px; margin-bottom:12px">
+        Kode <code><%= k.kode %></code> · Nomor dokumen <code><%= k.kode_dok %></code>
+        <%= k.keterangan ? ' · ' + k.keterangan : '' %>
+      </div>
+
+      <% k.aturan.forEach(function (a) { %>
+        <form method="post" action="/admin/kategori/aturan/<%= a.id %>" style="border:1px solid var(--garis); border-radius:9px; padding:13px; margin-bottom:12px">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <div class="mendatar" style="justify-content:space-between; margin-bottom:10px">
+            <b><%= WILAYAH[a.wilayah] %><%= a.catatan ? ' — ' + a.catatan : '' %></b>
+            <select name="aktif" style="width:auto">
+              <option value="1" <%= a.aktif ? 'selected' : '' %>>Aturan aktif</option>
+              <option value="0" <%= !a.aktif ? 'selected' : '' %>>Aturan nonaktif</option>
+            </select>
+          </div>
+
+          <div class="kisi k2">
+            <div class="medan">
+              <label class="f">Peran yang boleh mengajukan</label>
+              <select name="peran_pemohon" multiple size="6">
+                <% var terpilih = String(a.peran_pemohon || '').split(','); %>
+                <% Object.keys(PERAN).forEach(function (x) { %>
+                  <option value="<%= x %>" <%= terpilih.indexOf(x) >= 0 ? 'selected' : '' %>><%= PERAN[x].label %></option>
+                <% }) %>
+              </select>
+              <div class="petunjuk">Tahan Ctrl untuk memilih lebih dari satu. Administrator selalu boleh mengajukan.</div>
+            </div>
+            <div class="medan">
+              <label class="f">Ambang CEO saat ini</label>
+              <div class="nilai-tetap" id="ambang-ceo-kini">
+                <%= a.ambang_ceo ? 'Rp ' + angka(a.ambang_ceo) : 'semua nominal' %>
+              </div>
+              <div class="petunjuk">
+                Bukan kotak isian — angkanya diambil sendiri dari kolom <b>Ambang</b> pada baris
+                <b>CEO</b> di tabel bawah. Untuk menaikkan dari Rp 500.000 jadi Rp 1.000.000,
+                ubah di baris itu lalu simpan.
+              </div>
+            </div>
+          </div>
+
+          <table class="data item" style="margin-bottom:10px">
+            <thead>
+              <tr><th style="width:34px">#</th><th>Peran penyetuju</th><th>Label di dokumen</th>
+                  <th style="width:150px">Ambang (≥ Rp)</th><th style="width:160px">Lingkup pencarian</th></tr>
+            </thead>
+            <tbody>
+              <% var barisLangkah = a.langkah.concat([{ peran: '', label: '', min_nominal: '', lingkup: 'auto' },
+                                                      { peran: '', label: '', min_nominal: '', lingkup: 'auto' }]); %>
+              <% barisLangkah.forEach(function (l, i) { %>
+                <tr>
+                  <td><%= i + 1 %></td>
+                  <td>
+                    <select name="langkah_peran">
+                      <option value="">— kosong (baris diabaikan) —</option>
+                      <% Object.keys(PERAN).forEach(function (x) { %>
+                        <option value="<%= x %>" <%= l.peran === x ? 'selected' : '' %>><%= PERAN[x].label %></option>
+                      <% }) %>
+                    </select>
+                  </td>
+                  <td><input type="text" name="langkah_label" value="<%= l.label || '' %>" maxlength="120" placeholder="(otomatis dari peran)"></td>
+                  <td><input type="text" name="langkah_min" value="<%= l.min_nominal || '' %>" data-uang placeholder="selalu wajib"></td>
+                  <td>
+                    <select name="langkah_lingkup">
+                      <option value="auto" <%= (l.lingkup || 'auto') === 'auto' ? 'selected' : '' %>>Otomatis</option>
+                      <option value="area_tujuan" <%= l.lingkup === 'area_tujuan' ? 'selected' : '' %>>Area tujuan</option>
+                      <option value="global" <%= l.lingkup === 'global' ? 'selected' : '' %>>Kantor pusat</option>
+                    </select>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+
+          <div class="baris-tombol">
+            <button class="tombol utama kecil" type="submit" data-aksi="konfirmasi"
+              data-pesan="Simpan matriks approval <%= k.nama %> (<%= WILAYAH[a.wilayah] %>)?">Simpan Aturan</button>
+            <span class="petunjuk" style="margin:0">
+              Alur saat ini:
+              <%= a.langkah.map(function (l) { return (l.label || labelPeran(l.peran)) + (l.min_nominal ? ' (≥' + rp(l.min_nominal) + ')' : ''); }).join(' → ') || '— tanpa approval —' %>
+            </span>
+          </div>
+        </form>
+      <% }) %>
+    </div>
+  </div>
+<% }) %>
+
+<%- include('partials/bawah') %>

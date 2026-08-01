@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= judul %> — EAPEX</title>
+<link rel="stylesheet" href="/css/app.css<%= capAset.css %>">
+<link rel="icon" href="/gambar/favicon.svg" type="image/svg+xml">
+
+<!-- Aplikasi terpasang (PWA) — bisa ditambahkan ke layar utama Android & iPhone -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#461866">
+<meta name="application-name" content="EAPEX">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- iPhone/iPad memakai penanda sendiri; tanpa ini aplikasi terbuka di dalam Safari biasa -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EAPEX">
+<link rel="apple-touch-icon" href="/gambar/apple-touch-icon.png">
+</head>
+<body>
+<div class="aplikasi">
+  <aside class="samping tanpa-cetak">
+    <div class="merek">
+      <img class="logo" src="/gambar/logo-kla-lambang.png" alt="KLA Computer">
+      <div class="teks">
+        <b>EAPEX</b>
+        <span>Approval &amp; Capex</span>
+      </div>
+    </div>
+    <nav>
+      <% if (pengguna) { %>
+        <a href="/" class="<%= menuAktif === 'dasbor' ? 'aktif' : '' %>"><span class="ikon">▤</span> Dasbor</a>
+        <a href="/pengajuan/baru" class="<%= menuAktif === 'baru' ? 'aktif' : '' %>"><span class="ikon">＋</span> Pengajuan Baru</a>
+        <a href="/pengajuan" class="<%= menuAktif === 'pengajuan' ? 'aktif' : '' %>"><span class="ikon">☰</span> Daftar Pengajuan</a>
+        <a href="/approval" class="<%= menuAktif === 'approval' ? 'aktif' : '' %>">
+          <span class="ikon">✓</span> Kotak Approval
+          <% if (jumlahInbox) { %><span class="angka"><%= jumlahInbox %></span><% } %>
+        </a>
+        <a href="/cuti-saya" class="<%= menuAktif === 'cuti' ? 'aktif' : '' %>"><span class="ikon">☂</span> Cuti Saya</a>
+        <% if (pengguna.peran === 'admin') { %>
+          <div class="grup">Administrasi</div>
+          <a href="/admin" class="<%= menuAktif === 'admin' ? 'aktif' : '' %>"><span class="ikon">⚙</span> Ringkasan Sistem</a>
+          <a href="/admin/pengguna"><span class="ikon">👤</span> Pengguna</a>
+          <a href="/admin/master"><span class="ikon">🏢</span> Master Unit</a>
+          <a href="/admin/kategori"><span class="ikon">⇄</span> Matriks Approval</a>
+          <a href="/admin/pengaturan"><span class="ikon">🛠</span> Pengaturan</a>
+          <a href="/admin/jejak"><span class="ikon">🕘</span> Jejak Audit</a>
+        <% } %>
+      <% } %>
+    </nav>
+    <div class="kaki">
+      <%= (pengaturan && pengaturan.nama_perusahaan) || 'PT KLA TEKNOLOGI INDONESIA' %><br>
+      EAPEX v1.0
+    </div>
+  </aside>
+
+  <div class="utama">
+    <header class="atas tanpa-cetak">
+      <div class="judul-halaman"><%= judul %></div>
+      <div class="kanan">
+        <% if (pengguna) { %>
+          <a class="lonceng" href="/notifikasi" title="Notifikasi">🔔<% if (jumlahNotif) { %><span class="titik"><%= jumlahNotif %></span><% } %></a>
+          <div class="aku">
+            <b><%= pengguna.nama %></b>
+            <span><%= labelPeran(pengguna.peran) %><% if (pengguna.cabang_nama) { %> · <%= pengguna.cabang_nama %><% } %></span>
+          </div>
+          <form method="post" action="/keluar">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button class="tombol kecil" type="submit">Keluar</button>
+          </form>
+        <% } else { %>
+          <a class="tombol kecil utama" href="/login">Masuk</a>
+        <% } %>
+      </div>
+    </header>
+
+    <main class="isi">
+      <% if (typeof pesanSukses !== 'undefined' && pesanSukses) { %>
+        <div class="pesan sukses tanpa-cetak">✓ <%= pesanSukses %></div>
+      <% } %>
+      <% if (typeof pesanGalat !== 'undefined' && pesanGalat) { %>
+        <div class="pesan galat tanpa-cetak">⚠ <%= pesanGalat %></div>
+      <% } %>

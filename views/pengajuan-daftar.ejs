@@ -1,0 +1,147 @@
+<%- include('partials/atas') %>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2>Daftar Pengajuan</h2>
+    <div class="kanan">
+      <a class="tombol kecil" href="/pengajuan?<%= new URLSearchParams(Object.assign({}, q, { format: 'xlsx' })).toString() %>">Unduh Excel</a>
+      <a class="tombol kecil utama" href="/pengajuan/baru">+ Pengajuan Baru</a>
+    </div>
+  </div>
+  <div class="badan">
+    <form class="saring" method="get" action="/pengajuan">
+      <div class="medan">
+        <label class="f">Cari nomor / perihal / pemohon</label>
+        <input type="text" name="cari" value="<%= q.cari || '' %>" placeholder="mis. 0001 atau renovasi">
+      </div>
+      <div class="medan">
+        <label class="f">Status</label>
+        <select name="status">
+          <option value="">Semua</option>
+          <% Object.keys(STATUS).forEach(function (s) { %>
+            <option value="<%= s %>" <%= q.status === s ? 'selected' : '' %>><%= STATUS[s].label %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="medan">
+        <label class="f">Kategori</label>
+        <select name="kategori_id">
+          <option value="">Semua</option>
+          <% kategori.forEach(function (k) { %>
+            <option value="<%= k.id %>" <%= q.kategori_id === k.id ? 'selected' : '' %>><%= k.nama %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="medan">
+        <label class="f">Bulan</label>
+        <select name="bulan">
+          <option value="">Semua bulan</option>
+          <% for (var b = 1; b <= 12; b++) { %>
+            <option value="<%= b %>" <%= String(q.bulan) === String(b) ? 'selected' : '' %>>
+              <%= ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][b - 1] %>
+            </option>
+          <% } %>
+        </select>
+      </div>
+      <div class="medan">
+        <label class="f">Tahun</label>
+        <select name="tahun">
+          <option value="">Semua tahun</option>
+          <% daftarTahun.forEach(function (t) { %>
+            <option value="<%= t %>" <%= String(q.tahun) === String(t) ? 'selected' : '' %>><%= t %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="medan">
+        <label class="f">Unit</label>
+        <select name="cabang_id">
+          <option value="">Semua</option>
+          <% cabang.forEach(function (c) { %>
+            <option value="<%= c.id %>" <%= q.cabang_id === c.id ? 'selected' : '' %>><%= c.nama %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="medan">
+        <label class="f">&nbsp;</label>
+        <label class="centang" style="margin:0; padding:8px 0">
+          <input type="checkbox" name="punya_saya" value="1" <%= q.punya_saya === '1' ? 'checked' : '' %>>
+          Hanya pengajuan saya
+        </label>
+      </div>
+      <button class="tombol utama" type="submit">Terapkan</button>
+      <a class="tombol" href="/pengajuan">Reset</a>
+    </form>
+  </div>
+</div>
+
+<div class="kartu">
+  <div class="kepala">
+    <h3><%= hasil.jumlah %> dokumen<%
+      var namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      var periode = q.tahun ? ((q.bulan ? namaBulan[Number(q.bulan) - 1] + ' ' : '') + q.tahun) : '';
+    %><%= periode ? ' — ' + periode : '' %></h3>
+    <div class="kanan lemah" style="font-size:12px">
+      Menampilkan <%= hasil.baris.length %> baris<% if (hasil.jumlah > hasil.baris.length) { %> (halaman <%= Math.floor(hasil.mulai / hasil.batas) + 1 %>)<% } %>
+    </div>
+  </div>
+  <div class="badan rapat">
+    <% if (!hasil.baris.length) { %>
+      <div class="kosong">Tidak ada dokumen yang cocok dengan saringan.</div>
+    <% } else { %>
+    <div class="gulir">
+      <table class="data">
+        <thead>
+          <tr><th>Nomor</th><th>Tanggal</th><th>Kategori</th><th>Perihal</th><th>Pemohon</th>
+              <th>Unit</th><th class="angka">Nilai</th><th style="width:210px">Progres</th><th></th></tr>
+        </thead>
+        <tbody>
+        <% hasil.baris.forEach(function (b) { %>
+          <tr>
+            <td class="nowrap"><a href="/pengajuan/<%= b.id %>"><%= b.nomor || '(draft)' %></a></td>
+            <td class="nowrap"><%= tglSingkat(b.dibuat) %></td>
+            <td><%= b.kategori_nama %></td>
+            <td><%= b.judul %></td>
+            <td><%= b.pemohon_nama %></td>
+            <td><%= b.cabang_nama || b.departemen_nama || '-' %></td>
+            <td class="angka tebal"><%= rp(b.total) %></td>
+            <td>
+              <% var pr = ringkasProgres(b); %>
+              <div class="progres">
+                <div class="baris-atas">
+                  <span class="lencana <%= warnaStatus(b.status) %>"><%= labelStatus(b.status) %></span>
+                  <% if (b.jml_tahap) { %><span class="angka-tahap"><%= pr.persen %>%</span><% } %>
+                </div>
+                <div class="bilah <%= pr.warna %>"><span style="width: <%= pr.persen %>%"></span></div>
+                <div class="ket"><b><%= pr.teks %></b><%= pr.rinci ? ' · ' + pr.rinci : '' %></div>
+              </div>
+            </td>
+            <td class="nowrap"><a class="tombol kecil" href="/pengajuan/<%= b.id %>">Buka</a></td>
+          </tr>
+        <% }) %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6">Total halaman ini</td>
+            <td class="angka"><%= rp(hasil.baris.reduce(function (a, b) { return a + Number(b.total || 0); }, 0)) %></td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <% } %>
+  </div>
+  <% if (hasil.jumlah > hasil.batas) { %>
+    <div class="badan" style="border-top:1px solid var(--garis)">
+      <div class="baris-tombol">
+        <% if (hasil.mulai > 0) { %>
+          <a class="tombol kecil" href="/pengajuan?<%= new URLSearchParams(Object.assign({}, q, { mulai: Math.max(0, hasil.mulai - hasil.batas) })).toString() %>">← Sebelumnya</a>
+        <% } %>
+        <% if (hasil.mulai + hasil.batas < hasil.jumlah) { %>
+          <a class="tombol kecil" href="/pengajuan?<%= new URLSearchParams(Object.assign({}, q, { mulai: hasil.mulai + hasil.batas })).toString() %>">Berikutnya →</a>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/bawah') %>

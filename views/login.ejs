@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk — EAPEX</title>
+<link rel="stylesheet" href="/css/app.css<%= capAset.css %>">
+<link rel="icon" href="/gambar/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#461866">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EAPEX">
+<link rel="apple-touch-icon" href="/gambar/apple-touch-icon.png">
+</head>
+<body>
+<div class="halaman-masuk">
+  <form class="kotak-masuk" method="post" action="/login" autocomplete="on">
+    <div class="merek">
+      <img class="logo" src="/gambar/logo-kla-lambang.png" alt="KLA Computer">
+      <b>EAPEX</b>
+      <span>Aplikasi Electronic Approval &amp; Capex</span>
+      <span class="pt">PT KLA TEKNOLOGI INDONESIA</span>
+    </div>
+
+    <% if (galat) { %><div class="pesan galat">⚠ <%= galat %></div><% } %>
+
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="hidden" name="tujuan" value="<%= tujuan %>">
+
+    <div class="medan">
+      <label class="f" for="email">Email</label>
+      <input type="email" id="email" name="email" value="<%= email %>" required autofocus autocomplete="username">
+    </div>
+    <div class="medan">
+      <label class="f" for="sandi">Sandi</label>
+      <input type="password" id="sandi" name="sandi" required autocomplete="current-password">
+    </div>
+
+    <button class="tombol utama" type="submit" style="width:100%; justify-content:center">Masuk</button>
+
+    <p class="petunjuk" style="margin-top:16px; text-align:center">
+      Lupa sandi? Hubungi Administrator sistem untuk penyetelan ulang.
+    </p>
+  </form>
+</div>
+<script src="/js/app.js<%= capAset.js %>"></script>
+</body>
+</html>

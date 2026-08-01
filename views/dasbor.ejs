@@ -1,0 +1,123 @@
+<%- include('partials/atas') %>
+
+<div class="kisi k4" style="margin-bottom:18px">
+  <div class="kpi sorot">
+    <div class="label">Menunggu Approval Anda</div>
+    <div class="nilai"><%= ringkas.menungguSaya %></div>
+    <div class="bawah"><a href="/approval">Buka kotak approval →</a></div>
+  </div>
+  <div class="kpi">
+    <div class="label">Pengajuan Saya</div>
+    <div class="nilai"><%= ringkas.punyaSaya %></div>
+    <div class="bawah"><%= rp(ringkas.nilaiPunyaSaya) %></div>
+  </div>
+  <div class="kpi">
+    <div class="label">Sedang Berjalan (Semua)</div>
+    <div class="nilai"><%= ringkas.sedangBerjalan %></div>
+    <div class="bawah"><%= rp(ringkas.nilaiSedangBerjalan) %></div>
+  </div>
+  <div class="kpi">
+    <div class="label">Disetujui Bulan Ini</div>
+    <div class="nilai"><%= ringkas.disetujuiBulanIni %></div>
+    <div class="bawah"><%= rp(ringkas.nilaiDisetujuiBulanIni) %></div>
+  </div>
+</div>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2>Menunggu Keputusan Anda</h2>
+    <div class="kanan"><a class="tombol kecil" href="/approval">Lihat semua</a></div>
+  </div>
+  <div class="badan rapat">
+    <% if (!inbox.length) { %>
+      <div class="kosong">Tidak ada dokumen yang menunggu keputusan Anda. 🎉</div>
+    <% } else { %>
+    <div class="gulir">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Nomor</th><th>Kategori</th><th>Perihal</th><th>Pemohon</th><th>Unit</th>
+            <th class="angka">Nilai</th><th>Tahap Anda</th><th class="angka">Umur</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% inbox.forEach(function (b) { %>
+            <tr>
+              <td class="nowrap"><a href="/pengajuan/<%= b.id %>"><%= b.nomor %></a></td>
+              <td><%= b.kategori_nama %></td>
+              <td><%= b.judul %></td>
+              <td><%= b.pemohon_nama %></td>
+              <td><%= b.cabang_nama || b.departemen_nama || '-' %></td>
+              <td class="angka tebal"><%= rp(b.total) %></td>
+              <td><span class="lencana biru"><%= b.langkah_label %></span></td>
+              <td class="angka"><%= selisihHari(b.diajukan) %> hr</td>
+              <td class="nowrap"><a class="tombol kecil utama" href="/pengajuan/<%= b.id %>">Periksa</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="kisi k2">
+  <div class="kartu">
+    <div class="kepala"><h2>Pengajuan Terakhir</h2>
+      <div class="kanan"><a class="tombol kecil" href="/pengajuan">Semua</a></div>
+    </div>
+    <div class="badan rapat">
+      <% if (!terakhir.length) { %>
+        <div class="kosong">Belum ada pengajuan.<br><a href="/pengajuan/baru">Buat pengajuan pertama →</a></div>
+      <% } else { %>
+      <div class="gulir">
+        <table class="data">
+          <thead><tr><th>Nomor</th><th>Perihal</th><th class="angka">Nilai</th><th style="width:190px">Progres</th></tr></thead>
+          <tbody>
+            <% terakhir.forEach(function (b) { %>
+              <tr>
+                <td class="nowrap"><a href="/pengajuan/<%= b.id %>"><%= b.nomor || '(draft)' %></a>
+                  <div class="lemah" style="font-size:11.5px"><%= tglSingkat(b.dibuat) %></div></td>
+                <td><%= b.judul %><div class="lemah" style="font-size:11.5px"><%= b.kategori_nama %></div></td>
+                <td class="angka"><%= rp(b.total) %></td>
+                <td>
+                  <% var pr = ringkasProgres(b); %>
+                  <div class="progres">
+                    <div class="baris-atas">
+                      <span class="lencana <%= warnaStatus(b.status) %>"><%= labelStatus(b.status) %></span>
+                      <% if (b.jml_tahap) { %><span class="angka-tahap"><%= pr.persen %>%</span><% } %>
+                    </div>
+                    <div class="bilah <%= pr.warna %>"><span style="width: <%= pr.persen %>%"></span></div>
+                    <div class="ket"><%= pr.rinci || pr.teks %></div>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="kartu">
+    <div class="kepala"><h2>Nilai Pengajuan per Kategori</h2><div class="kanan lemah" style="font-size:12px">180 hari terakhir</div></div>
+    <div class="badan">
+      <% if (!rekap.length) { %>
+        <div class="kosong">Belum ada data.</div>
+      <% } else { %>
+        <% rekap.slice(0, 10).forEach(function (k) { %>
+          <div style="margin-bottom:11px">
+            <div class="mendatar" style="justify-content:space-between; margin-bottom:3px">
+              <span style="font-size:12.5px"><%= k.nama %> <span class="lemah">(<%= k.n %>)</span></span>
+              <span class="tebal" style="font-size:12.5px"><%= rp(k.jml) %></span>
+            </div>
+            <div class="bilah"><span style="width: <%= maksRekap ? Math.max(2, Math.round(Number(k.jml) / maksRekap * 100)) : 0 %>%"></span></div>
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

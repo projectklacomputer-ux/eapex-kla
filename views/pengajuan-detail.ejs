@@ -1,0 +1,434 @@
+<%- include('partials/atas') %>
+
+<% var d = p.data || {}; var bentuk = p.kategori_bentuk; %>
+
+<div class="kartu">
+  <div class="kepala">
+    <div>
+      <h2 style="margin-bottom:2px"><%= p.nomor || 'Draft (belum bernomor)' %></h2>
+      <div class="lemah" style="font-size:12.5px">
+        <%= p.kategori_nama %> · <%= WILAYAH[p.wilayah] %> ·
+        dibuat <%= tglIndo(p.dibuat, true) %> oleh <%= p.pemohon_nama %>
+      </div>
+    </div>
+    <div class="kanan">
+      <span class="lencana <%= warnaStatus(p.status) %>"><%= labelStatus(p.status) %></span>
+      <% if (p.nomor) { %>
+        <a class="tombol kecil" href="/pengajuan/<%= p.id %>/cetak" target="_blank" rel="noopener">🖶 Cetak</a>
+      <% } %>
+      <% if (bolehUbah) { %>
+        <a class="tombol kecil utama" href="/pengajuan/<%= p.id %>/ubah">Ubah</a>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (p.status === 'revisi') { %>
+    <div class="badan" style="border-bottom:1px solid var(--garis); padding-bottom:12px">
+      <div class="pesan ingat" style="margin-bottom:0">
+        Dokumen dikembalikan untuk revisi. Perbaiki isinya lalu ajukan kembali — rantai approval dihitung ulang dari awal.
+      </div>
+    </div>
+  <% } %>
+</div>
+
+
+<!-- ==================================================== ALUR APPROVAL (MELEBAR)
+     Ditempatkan selebar halaman, di atas isi dokumen: "sudah sampai mana"
+     adalah hal pertama yang dicari orang saat membuka dokumen. Kolomnya
+     disejajarkan dengan grid supaya nama, status, dan jam lurus ke bawah. -->
+<div class="kartu">
+  <div class="kepala">
+    <h2>Alur Approval</h2>
+    <div class="kanan">
+      <% if (p.persetujuan.length) { %>
+        <% var sudah = p.persetujuan.filter(function (x) { return x.status === 'disetujui'; }).length; %>
+        <span class="lencana <%= warnaStatus(p.status) %>"><%= labelStatus(p.status) %></span>
+        <span class="lencana abu"><%= sudah %> dari <%= p.persetujuan.length %> tahap</span>
+      <% } %>
+    </div>
+  </div>
+  <div class="badan rapat">
+    <% if (p.persetujuan.length) { %>
+      <div class="alur-lebar">
+        <div class="tahap oke">
+          <div><div class="bulat">✓</div></div>
+          <div><div class="nama-tahap">Diajukan</div><div class="peran-tahap">Pemohon</div></div>
+          <div class="kolom-orang">
+            <div class="orang"><%= p.pemohon_nama %></div>
+            <div class="jabatan"><%= p.pemohon_jabatan || labelPeran(p.pemohon.peran) %></div>
+          </div>
+          <div class="kolom-status"><span class="lencana hijau">Diajukan</span></div>
+          <div class="waktu">
+            <%= tglIndo(p.diajukan || p.dibuat) %><br><span class="wib"><%= jamIndo(p.diajukan || p.dibuat) %></span>
+          </div>
+        </div>
+
+        <% p.persetujuan.forEach(function (s) { %>
+          <% var aktifIni = langkahAktif && langkahAktif.id === s.id;
+             var kls = s.status === 'disetujui' ? 'oke'
+                     : (s.status === 'ditolak' ? 'tolak'
+                     : (s.status === 'revisi' ? 'revisi'
+                     : (s.status === 'dilewati' ? 'lewat' : (aktifIni ? 'kini' : '')))); %>
+          <div class="tahap <%= kls %>">
+            <div><div class="bulat"><%= s.status === 'disetujui' ? '✓' : (s.status === 'ditolak' ? '✕' : (s.status === 'revisi' ? '↩' : s.urut)) %></div></div>
+            <div>
+              <div class="nama-tahap"><%= s.label %></div>
+              <div class="peran-tahap">Tahap <%= s.urut %><% if (s.min_nominal) { %> · wajib karena nilai ≥ <%= rp(s.min_nominal) %><% } %></div>
+            </div>
+            <div class="kolom-orang">
+              <% if (s.aktor_nama) { %>
+                <div class="orang"><%= s.aktor_nama %></div>
+                <div class="jabatan"><%= s.aktor_jabatan || '' %></div>
+              <% } else { %>
+                <div class="orang"><%= (s.kandidat || []).map(function (k) { return k.nama; }).join(', ') || '⚠ belum ada penyetuju' %></div>
+                <div class="jabatan"><%= labelPeran(s.peran) %></div>
+              <% } %>
+            </div>
+            <div class="kolom-status">
+              <% if (s.status === 'menunggu') { %>
+                <span class="lencana <%= aktifIni ? 'kuning' : 'abu' %>"><%= aktifIni ? 'Menunggu sekarang' : 'Belum jalan' %></span>
+              <% } else if (s.status === 'dilewati') { %>
+                <span class="lencana abu">Tidak dijalankan</span>
+              <% } else { %>
+                <span class="lencana <%= s.status === 'disetujui' ? 'hijau' : (s.status === 'ditolak' ? 'merah' : 'oranye') %>"><%= labelStatus(s.status) %></span>
+              <% } %>
+            </div>
+            <div class="waktu">
+              <% if (s.waktu) { %>
+                <%= tglIndo(s.waktu) %><br><span class="wib"><%= jamIndo(s.waktu) %></span>
+              <% } else if (aktifIni) { %>
+                menunggu sejak<br><span class="wib"><%= tglSingkat(p.diperbarui || p.diajukan) %>, <%= jamIndo(p.diperbarui || p.diajukan) %></span>
+              <% } else { %>—<% } %>
+            </div>
+            <% if (s.komentar) { %><div class="catatan"><%= s.komentar %></div><% } %>
+          </div>
+        <% }) %>
+      </div>
+    <% } else if (pratinjau) { %>
+      <div style="padding:14px 18px 4px" class="lemah">
+        Perkiraan alur bila diajukan dengan nilai <b><%= rp(p.total) %></b>:
+      </div>
+      <div class="alur-lebar">
+        <% pratinjau.forEach(function (s) { %>
+          <div class="tahap">
+            <div><div class="bulat"><%= s.urut %></div></div>
+            <div><div class="nama-tahap"><%= s.label %></div><div class="peran-tahap">Tahap <%= s.urut %></div></div>
+            <div class="kolom-orang">
+              <div class="orang"><%= s.kandidat.map(function (k) { return k.nama; }).join(', ') || '⚠ belum ada pengguna untuk peran ini' %></div>
+              <div class="jabatan"><%= labelPeran(s.peran) %></div>
+            </div>
+            <div class="kolom-status"><span class="lencana abu">Belum jalan</span></div>
+            <div class="waktu">—</div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="kosong">Alur approval belum bisa dihitung. Lengkapi isi dokumen dulu.</div>
+    <% } %>
+  </div>
+</div>
+
+<div class="kisi k2" style="align-items:start">
+  <!-- ============================================================ ISI DOKUMEN -->
+  <div>
+    <div class="kartu">
+      <div class="kepala"><h3>Isi Pengajuan</h3>
+        <div class="kanan tebal" style="font-size:1.1rem"><%= rp(p.total) %></div>
+      </div>
+      <div class="badan">
+        <dl class="rincian">
+          <dt>Perihal</dt><dd class="tebal"><%= p.judul %></dd>
+          <dt>Unit</dt><dd><%= p.cabang_nama || '-' %><%= p.departemen_nama ? ' · ' + p.departemen_nama : '' %></dd>
+          <dt>Pemohon</dt><dd><%= p.pemohon_nama %><span class="lemah"> — <%= p.pemohon_jabatan || labelPeran(p.pemohon.peran) %></span></dd>
+          <% if (p.status_anggaran) { %><dt>Status anggaran</dt><dd><%= p.status_anggaran === 'budgeted' ? 'Budgeted' : 'Unbudgeted' %></dd><% } %>
+
+          <% if (bentuk === 'capex') { %>
+            <dt>Nama proyek</dt><dd><%= d.nama_proyek || '-' %></dd>
+            <dt>Tujuan pengadaan</dt><dd><%
+              var tj = (d.tujuan || []).map(function (k) {
+                var f = TUJUAN_CAPEX.filter(function (x) { return x.kode === k; })[0]; return f ? f.teks : k; });
+            %><%= tj.length ? tj.join(', ') : '-' %></dd>
+            <dt>Kategori aset</dt><dd><%= d.kategori_aset || '-' %></dd>
+            <dt>Lokasi</dt><dd><%= d.lokasi || '-' %></dd>
+            <dt>Vendor</dt><dd><%= d.vendor || '-' %></dd>
+            <dt>Jadwal dibutuhkan</dt><dd><%= d.jadwal_kebutuhan || '-' %></dd>
+            <% if (d.referensi_disposal) { %><dt>Referensi disposal</dt><dd><%= d.referensi_disposal %></dd><% } %>
+            <% if (d.deskripsi) { %><dt>Spesifikasi</dt><dd style="white-space:pre-wrap"><%= d.deskripsi %></dd><% } %>
+            <dt>Justifikasi</dt><dd style="white-space:pre-wrap"><%= d.justifikasi || '-' %></dd>
+          <% } %>
+
+          <% if (bentuk === 'barang') { %>
+            <dt>Jalur pengadaan</dt><dd><%= d.jalur_pengadaan === 'stock' ? 'Ambil dari stock (pindah gudang HO)' : 'Lewat Purchasing (PO ke vendor)' %></dd>
+            <dt>Justifikasi</dt><dd style="white-space:pre-wrap"><%= d.justifikasi || '-' %></dd>
+          <% } %>
+
+          <% if (bentuk === 'biaya') { %>
+            <dt>Vendor / penerima</dt><dd><%= d.vendor || '-' %></dd>
+            <dt>Periode</dt><dd><%= d.periode || '-' %></dd>
+            <dt>Penjelasan</dt><dd style="white-space:pre-wrap"><%= d.penjelasan || '-' %></dd>
+          <% } %>
+
+          <% if (bentuk === 'perjalanan') { %>
+            <dt>Tujuan</dt><dd><%= d.tujuan_kota || '-' %></dd>
+            <dt>Tanggal</dt><dd><%= tglSingkat(d.tgl_mulai) %> — <%= tglSingkat(d.tgl_selesai) %></dd>
+            <dt>Moda transportasi</dt><dd><%= d.moda || '-' %></dd>
+            <dt>Peserta</dt><dd style="white-space:pre-wrap"><%= d.peserta || '-' %></dd>
+            <dt>Keperluan</dt><dd style="white-space:pre-wrap"><%= d.keperluan || '-' %></dd>
+          <% } %>
+
+          <% if (bentuk === 'maintenance') { %>
+            <dt>Lokasi</dt><dd><%= d.lokasi || '-' %></dd>
+            <dt>Jenis pekerjaan</dt><dd><%= d.jenis_pekerjaan || '-' %></dd>
+            <dt>Vendor</dt><dd><%= d.vendor || '-' %></dd>
+            <dt>Rencana pengerjaan</dt><dd><%= tglSingkat(d.tgl_rencana) %></dd>
+            <dt>Penjelasan</dt><dd style="white-space:pre-wrap"><%= d.penjelasan || '-' %></dd>
+          <% } %>
+
+          <% if (bentuk === 'refund') { %>
+            <dt>Nominal refund</dt><dd class="tebal"><%= rp(d.nominal) %></dd>
+            <dt>Nomor nota</dt><dd><%= d.no_nota || '-' %></dd>
+            <dt>Penerima dana</dt><dd><%= d.nama_penerima || '-' %></dd>
+            <dt>Rekening tujuan</dt><dd><%= d.bank || '' %> <%= d.no_rekening || '-' %></dd>
+            <dt>Alasan</dt><dd style="white-space:pre-wrap"><%= d.alasan || '-' %></dd>
+          <% } %>
+
+          <% if (bentuk === 'pindah_area') { %>
+            <dt>Karyawan</dt><dd><%= d.nama_karyawan || '-' %> <span class="lemah"><%= d.jabatan_karyawan ? '— ' + d.jabatan_karyawan : '' %></span></dd>
+            <dt>Tanggal pindah</dt><dd><%= tglSingkat(d.tgl_pindah) %></dd>
+            <dt>Penjelasan</dt><dd style="white-space:pre-wrap"><%= d.penjelasan || '-' %></dd>
+          <% } %>
+
+          <% if (p.keterangan) { %><dt>Catatan pemohon</dt><dd style="white-space:pre-wrap"><%= p.keterangan %></dd><% } %>
+        </dl>
+      </div>
+    </div>
+
+    <% if (p.items.length) { %>
+      <div class="kartu">
+        <div class="kepala"><h3>Rincian Biaya</h3></div>
+        <div class="badan rapat">
+          <div class="gulir">
+            <table class="data">
+              <thead><tr><th style="width:34px">#</th><th>Uraian</th><th class="angka">Qty</th><th>Satuan</th>
+                         <th class="angka">Harga</th><th class="angka">Nominal</th><th>Keterangan</th></tr></thead>
+              <tbody>
+                <% var sub = 0; p.items.forEach(function (it, i) { sub += Number(it.nominal || 0); %>
+                  <tr>
+                    <td><%= i + 1 %></td>
+                    <td><%= it.nama %></td>
+                    <td class="angka"><%= angka(it.qty) %></td>
+                    <td><%= it.satuan || '' %></td>
+                    <td class="angka"><%= rp(it.harga) %></td>
+                    <td class="angka tebal"><%= rp(it.nominal) %></td>
+                    <td class="lemah"><%= it.keterangan || '' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+              <tfoot>
+                <tr><td colspan="5" class="kanan">Subtotal</td><td class="angka"><%= rp(sub) %></td><td></td></tr>
+                <% if (bentuk === 'capex') { %>
+                  <tr><td colspan="5" class="kanan">Pengiriman</td><td class="angka"><%= rp(d.pengiriman) %></td><td></td></tr>
+                  <tr><td colspan="5" class="kanan">Instalasi</td><td class="angka"><%= rp(d.instalasi) %></td><td></td></tr>
+                  <tr><td colspan="5" class="kanan">Biaya lain</td><td class="angka"><%= rp(d.biaya_lain) %></td><td></td></tr>
+                <% } %>
+                <tr><td colspan="5" class="kanan">TOTAL</td><td class="angka"><%= rp(p.total) %></td><td></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (bentuk === 'capex' && p.wilayah === 'store' && (p.analisa.sales || p.analisa.margin)) { %>
+      <div class="kartu">
+        <div class="kepala"><h3>Analisa Retail</h3></div>
+        <div class="badan rapat">
+          <table class="data">
+            <tbody>
+              <tr><td>Sales tambahan / bulan</td><td class="angka"><%= rp(p.analisa.sales) %></td></tr>
+              <tr><td>Margin</td><td class="angka"><%= p.analisa.margin %> %</td></tr>
+              <tr><td>Profit / bulan</td><td class="angka tebal"><%= rp(p.analisa.profit) %></td></tr>
+              <tr><td>Payback period</td><td class="angka tebal"><%= p.analisa.payback ? p.analisa.payback + ' bulan' : '-' %></td></tr>
+              <tr><td>ROI</td><td class="angka tebal"><%= p.analisa.roi ? p.analisa.roi + ' % / tahun' : '-' %></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- lampiran -->
+    <div class="kartu">
+      <div class="kepala"><h3>Lampiran <span class="lemah">(<%= p.lampiran.length %>)</span></h3></div>
+      <div class="badan">
+        <% if (p.lampiran.length) { %>
+          <table class="data" style="margin-bottom:12px">
+            <tbody>
+            <% p.lampiran.forEach(function (l) { %>
+              <tr>
+                <td><a href="/pengajuan/<%= p.id %>/lampiran/<%= l.id %>"><%= l.nama_asli %></a>
+                  <div class="lemah" style="font-size:11.5px">
+                    <%= Math.max(1, Math.round(Number(l.ukuran || 0) / 1024)) %> KB ·
+                    <%= l.pengunggah_nama || '-' %> · <%= tglIndo(l.dibuat, true) %>
+                  </div>
+                </td>
+                <td class="kanan nowrap">
+                  <% if (pengguna.peran === 'admin' || (l.pengunggah_id === pengguna.id && ['draft','revisi'].indexOf(p.status) >= 0)) { %>
+                    <form method="post" action="/pengajuan/<%= p.id %>/lampiran/<%= l.id %>/hapus" style="display:inline">
+                      <input type="hidden" name="_csrf" value="<%= csrf %>">
+                      <button class="tombol kecil" type="submit" data-aksi="konfirmasi" data-pesan="Hapus lampiran ini?">Hapus</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+            </tbody>
+          </table>
+        <% } else { %>
+          <p class="lemah">Belum ada lampiran.</p>
+        <% } %>
+
+        <% if (['draft','revisi'].indexOf(p.status) >= 0 || bolehPutus || p.pemohon_id === pengguna.id) { %>
+          <form method="post" action="/pengajuan/<%= p.id %>/lampiran" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <div class="medan">
+              <label class="f">Tambah lampiran (penawaran, RAB, foto, kuitansi)</label>
+              <input type="file" name="berkas" multiple>
+              <div class="petunjuk">PDF, JPG, PNG, Excel, Word, CSV. Maksimal <%= maksMB %> MB per berkas, 10 berkas sekali unggah.</div>
+            </div>
+            <button class="tombol" type="submit">Unggah</button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ SISI KANAN -->
+  <div>
+    <!-- keputusan -->
+    <% if (bolehPutus) { %>
+      <div class="kartu" style="border-color:var(--emas)">
+        <div class="kepala" style="background:var(--kuning-latar)">
+          <h3>Keputusan Anda — <%= langkahAktif.label %></h3>
+        </div>
+        <div class="badan">
+          <form method="post" action="/pengajuan/<%= p.id %>/putuskan" data-perlu-alasan="1">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <div class="medan">
+              <label class="centang"><input type="radio" name="aksi" value="setuju" checked> <b>Setujui</b> — teruskan ke tahap berikutnya</label>
+              <label class="centang"><input type="radio" name="aksi" value="revisi"> <b>Minta revisi</b> — kembalikan ke pemohon untuk diperbaiki</label>
+              <label class="centang"><input type="radio" name="aksi" value="tolak"> <b>Tolak</b> — hentikan pengajuan</label>
+            </div>
+            <div class="medan" id="wadah-alasan">
+              <label class="f" id="label-alasan">Catatan (opsional)</label>
+              <textarea name="komentar" maxlength="2000" placeholder="Alasan wajib diisi bila menolak atau meminta revisi"></textarea>
+            </div>
+
+            <% if (tahapBerikut) { %>
+              <!-- Pilihan melewati tahap berikutnya. Yang paling tahu apakah orang
+                   berikutnya bisa dihubungi HARI INI adalah penyetuju sekarang —
+                   bukan sistem, dan bukan catatan cuti yang mungkin belum diisi. -->
+              <div class="kotak-lewat">
+                <div class="kepala-lewat">
+                  Berikutnya: <b><%= tahapBerikut.label %></b>
+                  <% if (tahapBerikut.orang) { %><span class="lemah">— <%= tahapBerikut.orang %></span><% } %>
+                </div>
+
+                <% if (tahapBerikut.menyatakanTakBisa.length) { %>
+                  <div class="pesan galat rapat">
+                    <b>Menyatakan tidak bisa menyetujui:</b> <%= tahapBerikut.menyatakanTakBisa.join('; ') %>.
+                    Pernyataan ini <b>tidak melewati tahapnya dengan sendirinya</b> — Anda yang memastikan
+                    dan memutuskan.
+                  </div>
+                <% } %>
+                <% if (tahapBerikut.sedangCuti.length) { %>
+                  <div class="pesan ingat rapat">
+                    Sedang cuti tapi menyatakan <b>masih bisa menyetujui</b>:
+                    <%= tahapBerikut.sedangCuti.join('; ') %>
+                  </div>
+                <% } %>
+
+                <% if (tahapBerikut.bolehDilewati) { %>
+                  <label class="centang">
+                    <input type="checkbox" name="lewati_berikut" value="1" id="pilih-lewat">
+                    <b>Lewati <%= tahapBerikut.label %></b> — hari ini tidak memungkinkan menyetujui
+                  </label>
+                  <div class="medan" id="wadah-alasan-lewat" hidden>
+                    <label class="f">Kenapa dilewati? <span class="wajib">*</span></label>
+                    <input type="text" name="alasan_lewat" maxlength="500"
+                      placeholder="mis. sedang cuti sampai 3 Agustus, sudah dikonfirmasi lewat telepon">
+                    <div class="petunjuk">
+                      Tercatat di dokumen ini beserta nama Anda, dan <b><%= tahapBerikut.label %></b> diberi tahu
+                      bahwa tahapnya dilewati. Pakai hanya kalau memang tidak bisa menunggu.
+                    </div>
+                  </div>
+                <% } else { %>
+                  <div class="petunjuk" style="margin:6px 0 0">
+                    Tahap ini <b>tidak bisa dilewati</b> — <%= tahapBerikut.alasanTakBoleh %>.
+                  </div>
+                <% } %>
+              </div>
+            <% } %>
+
+            <button class="tombol hijau" type="submit" data-aksi="konfirmasi"
+              data-pesan="Simpan keputusan untuk <%= p.nomor %> (<%= rp(p.total) %>)?">Simpan Keputusan</button>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- aksi pemohon -->
+    <% if (['draft','revisi'].indexOf(p.status) >= 0 && (p.pemohon_id === pengguna.id || pengguna.peran === 'admin')) { %>
+      <div class="kartu">
+        <div class="badan">
+          <form method="post" action="/pengajuan/<%= p.id %>/ajukan">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button class="tombol emas" type="submit" data-aksi="konfirmasi"
+              data-pesan="Kirim dokumen ini ke penyetuju pertama?">Ajukan Approval</button>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (['draft','revisi','menunggu'].indexOf(p.status) >= 0 && (p.pemohon_id === pengguna.id || pengguna.peran === 'admin')) { %>
+      <div class="kartu">
+        <div class="badan">
+          <form method="post" action="/pengajuan/<%= p.id %>/batal">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <div class="medan">
+              <label class="f">Batalkan pengajuan</label>
+              <input type="text" name="alasan" maxlength="500" placeholder="Alasan pembatalan (opsional)">
+            </div>
+            <button class="tombol merah" type="submit" data-aksi="konfirmasi"
+              data-pesan="Batalkan pengajuan ini? Tidak bisa dikembalikan.">Batalkan</button>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- diskusi & jejak -->
+    <div class="kartu" id="diskusi">
+      <div class="kepala"><h3>Diskusi &amp; Jejak</h3></div>
+      <div class="badan">
+        <form method="post" action="/pengajuan/<%= p.id %>/komentar" style="margin-bottom:14px">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <div class="medan">
+            <textarea name="teks" maxlength="2000" placeholder="Tulis pertanyaan atau catatan untuk pemohon/penyetuju"></textarea>
+          </div>
+          <button class="tombol kecil" type="submit">Kirim Komentar</button>
+        </form>
+        <ul class="jejak">
+          <% p.jejak.slice().reverse().forEach(function (j) { %>
+            <li>
+              <b><%= j.nama || 'sistem' %></b>
+              <span class="lencana abu" style="font-size:10.5px"><%= j.aksi %></span>
+              <div><%= j.detail || '' %></div>
+              <div class="waktu"><%= tglIndo(j.waktu, true) %></div>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

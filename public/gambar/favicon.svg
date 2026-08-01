@@ -1,0 +1,7 @@
+<!-- Ikon tab peramban. Ukurannya sangat kecil (16-32 px), jadi logo penuh
+     "KLA COMPUTER" tidak akan terbaca — dipakai huruf E (EAPEX) dengan warna
+     merek: latar ungu #461866, huruf emas #f7bf0a. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#461866"/>
+  <path d="M18 16h26v8H26.5v7h15.5v8H26.5v7H44v8H18z" fill="#f7bf0a"/>
+</svg>

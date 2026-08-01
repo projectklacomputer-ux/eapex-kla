@@ -1,0 +1,104 @@
+<%- include('partials/atas') %>
+
+<div class="kartu">
+  <div class="kepala">
+    <h2>Cuti Saya</h2>
+    <% if (sedangCuti) { %>
+      <div class="kanan">
+        <span class="lencana <%= (saya.cuti_approve || 'tetap') === 'tetap' ? 'biru' : 'oranye' %>">
+          sedang cuti s/d <%= tglSingkat(saya.cuti_selesai) %>
+        </span>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="badan rapat" id="wadah-form">
+    <div class="petunjuk" style="margin-bottom:14px">
+      Catat di sini kalau Anda akan cuti, dinas luar, atau berhalangan. Yang paling
+      dulu tahu adalah Anda sendiri, jadi isi sendiri saja — tidak perlu menunggu
+      Administrator. Administrator tetap bisa mengisikan untuk Anda, dan Anda akan
+      menerima pemberitahuan bila itu terjadi.
+      <br><br>
+      <b>Mencatat cuti tidak otomatis membuat approval Anda dilewati.</b> Hanya ada dua
+      cara tahap Anda benar-benar berpindah: <b>menunjuk pengganti</b>, atau <b>penyetuju
+      sebelum Anda memastikan</b> bahwa Anda memang tidak bisa lalu melewatinya.
+    </div>
+
+    <form method="post" action="/cuti-saya">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+      <div class="kisi k3">
+        <div class="medan">
+          <label class="f">Mulai</label>
+          <input type="date" name="cuti_mulai" value="<%= saya.cuti_mulai || '' %>"
+            data-medan="Cuti mulai" data-bantu="Hari pertama Anda berhalangan. Ikut terhitung.">
+        </div>
+        <div class="medan">
+          <label class="f">Selesai</label>
+          <input type="date" name="cuti_selesai" value="<%= saya.cuti_selesai || '' %>"
+            data-medan="Cuti selesai"
+            data-bantu="Hari terakhir, ikut terhitung. Wajib diisi — cuti tanpa ujung akan terlupakan.">
+        </div>
+        <div class="medan">
+          <label class="f">Selama itu, approval saya <span class="wajib">*</span></label>
+          <select name="cuti_approve" id="pilih-mode-cuti" data-medan="Perlakuan approval selama cuti"
+            data-bantu="Pilih sejujurnya. Melewati tahap berarti satu lapis pemeriksaan hilang untuk dokumen orang lain.">
+            <option value="tetap" <%= (saya.cuti_approve || 'tetap') === 'tetap' ? 'selected' : '' %>>
+              Tetap saya yang menyetujui — masih bisa handle</option>
+            <option value="pengganti" <%= saya.cuti_approve === 'pengganti' ? 'selected' : '' %>>
+              Alihkan ke pengganti</option>
+            <option value="lewati" <%= saya.cuti_approve === 'lewati' ? 'selected' : '' %>>
+              Saya tidak bisa menyetujui — minta dipastikan penyetuju sebelumnya</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="kisi k2">
+        <div class="medan">
+          <label class="f">Pengganti <span class="lemah">(wajib bila dialihkan)</span></label>
+          <select name="pengganti_id" data-medan="Pengganti"
+            data-bantu="Rekan yang menyetujui menggantikan Anda. Dia akan diberi tahu.">
+            <option value="">— belum dipilih —</option>
+            <% rekan.forEach(function (x) { %>
+              <option value="<%= x.id %>" <%= saya.pengganti_id === x.id ? 'selected' : '' %>>
+                <%= x.nama %> — <%= labelPeran(x.peran) %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="medan">
+          <label class="f">Keterangan</label>
+          <input type="text" name="cuti_alasan" maxlength="200" value="<%= saya.cuti_alasan || '' %>"
+            placeholder="mis. cuti tahunan, dinas luar, sakit"
+            data-medan="Keterangan"
+            data-bantu="Ikut tercatat pada dokumen yang tahapnya dilewati, supaya alasannya bisa ditelusuri.">
+        </div>
+      </div>
+
+      <div class="tombol-kirim">
+        <button class="tombol utama" type="submit">Simpan</button>
+        <% if (saya.cuti_mulai) { %>
+          <button class="tombol" type="submit" name="cuti_mulai" value="" data-aksi="konfirmasi"
+            data-pesan="Hapus catatan cuti Anda? Approval kembali berjalan seperti biasa.">Hapus catatan cuti</button>
+        <% } %>
+      </div>
+    </form>
+
+    <% if (saya.cuti_mulai) { %>
+      <div class="pesan ingat" style="margin-top:16px">
+        <b>Tercatat:</b> <%= tglSingkat(saya.cuti_mulai) %> sampai <%= tglSingkat(saya.cuti_selesai) %><%
+          %><% if (saya.cuti_alasan) { %> — <%= saya.cuti_alasan %><% } %>.
+        <% if (saya.cuti_approve === 'pengganti') { %>
+          Approval dialihkan ke <b><%= saya.pengganti_nama || '(belum dipilih)' %></b>.
+        <% } else if (saya.cuti_approve === 'lewati') { %>
+          Tahap approval Anda <b>tidak otomatis hilang</b>. Pernyataan ini muncul di layar
+          penyetuju sebelum Anda; dialah yang memastikan lalu memutuskan melewatinya
+          atau menunggu Anda. Cara yang lebih pasti: pilih <b>Alihkan ke pengganti</b>.
+        <% } else { %>
+          Approval <b>tetap Anda</b> yang memutuskan; ini hanya penanda bagi rekan lain.
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>
