@@ -79,15 +79,34 @@ Lanjut ke Bagian 2.
    bukan pesan galat melainkan halaman yang menggantung diam — susah dilacak
    kalau tidak tahu sebabnya.
 
-4. Salin. Bentuknya:
+4. **Abaikan spanduk "Transaction pooler uses IPv6 by default"** dan tombol
+   **Enable IPv4 add-on** di sebelahnya. Add-on itu berbayar dan tidak
+   dibutuhkan: alamat `aws-0-ap-southeast-1.pooler.supabase.com` menghasilkan
+   tiga alamat IPv4 dan nol IPv6, dan port 6543-nya sudah diuji tembus dari
+   komputer ini. Peringatan itu berlaku untuk jaringan yang murni IPv6.
+
+5. Salin **seluruhnya**. Kotak string itu tergulung ke kanan, jadi yang terlihat
+   di layar cuma ekornya — bagian depan (`postgresql://postgres.…`) tersembunyi.
+   Klik di dalam kotaknya, tekan **Ctrl+A** lalu **Ctrl+C**, dan tempel ke
+   **Notepad** untuk melihat utuhnya.
+
+   Bentuk lengkapnya:
 
    ```
    postgresql://postgres.KODEPROJECT:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
    ```
 
-5. Ganti `[YOUR-PASSWORD]` dengan sandi dari Langkah 1 — **kurung sikunya ikut
+   Kalau yang tertempel tidak diawali `postgresql://`, berarti belum utuh.
+
+6. Ganti `[YOUR-PASSWORD]` dengan sandi dari Langkah 1 — **kurung sikunya ikut
    dibuang**. Sandinya tidak ikut tersalin dari layar Supabase; harus Anda
    tempelkan sendiri.
+
+   ```
+   …postgres.abcd:[YOUR-PASSWORD]@aws-0…   ← belum diganti
+   …postgres.abcd:[Rahasia123]@aws-0…      ← kurung siku masih ada, SALAH
+   …postgres.abcd:Rahasia123@aws-0…        ← benar
+   ```
 
 > Alamat jadi ini memuat sandi basis data. Simpan sendiri, jangan dikirim ke
 > siapa pun.
