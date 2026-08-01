@@ -52,11 +52,14 @@ kewenangan persetujuan.
 ### 1.4 Pastikan tidak ada rahasia yang ikut
 
 ```bash
-cd "E:\KLA\Claude\EAPEX" && git ls-files | grep -i "^data/\|\.env$\|akun-awal\|\.db$"
+cd "E:\KLA\Claude\EAPEX" && git ls-files -- "data/*" ":!data/**/.gitkeep" ":!data/.gitkeep"
 ```
 
 **Harus kosong.** Kalau ada yang muncul, berhenti — jangan lanjut ke Vercel —
 dan beri tahu saya.
+
+Dua berkas `.gitkeep` sengaja diikutkan dan memang isinya kosong; gunanya hanya
+supaya folder `data/` dan `data/lampiran/` tetap ada setelah repo di-clone.
 
 ---
 
