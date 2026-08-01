@@ -1,0 +1,19 @@
+# Akhir baris diseragamkan jadi LF di dalam repositori, apa pun sistem yang
+# dipakai orang yang mengubahnya. Tanpa ini, satu orang bekerja di Windows dan
+# satu lagi di Linux akan menghasilkan "seluruh berkas berubah" pada tiap
+# perbandingan — dan perubahan yang sesungguhnya jadi tenggelam di dalamnya.
+* text=auto eol=lf
+
+# Berkas yang memang harus CRLF supaya bisa diklik dua kali di Windows.
+*.bat text eol=crlf
+
+# Berkas biner: jangan pernah diutak-atik akhir barisnya.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.xlsx binary
+*.docx binary
+*.db binary
