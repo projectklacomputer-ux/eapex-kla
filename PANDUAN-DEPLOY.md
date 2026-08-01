@@ -23,17 +23,40 @@ powershell -ExecutionPolicy Bypass -File scripts\hubungkan-vercel.ps1
 Keduanya aman dijalankan ulang. Yang perlu disiapkan sebelum menjalankan:
 `data\sandi.txt` berisi sandi basis data Supabase saja, satu baris.
 
-### Yang masih menggantung
+### Penyebaran otomatis SUDAH aktif
 
-**Penyebaran otomatis dari GitHub belum aktif.** `vercel git connect` ditolak
-dengan pesan *"You need to add a Login Connection to your GitHub account first"*
-- akun Vercel-nya belum punya sambungan masuk lewat GitHub.
+Sejak 1 Agustus 2026, project Vercel tertaut ke repo GitHub. Artinya:
 
-Sampai itu disetel, perubahan kode disebarkan dengan menjalankan ulang
-`scripts\hubungkan-vercel.ps1`, bukan dengan `git push`.
+> **`git push` langsung mengubah sistem yang dipakai 27 orang.**
 
-Cara menyalakannya: Vercel > Settings akun > **Login Connections** > tambahkan
-GitHub, lalu Project `eapex-kla` > Settings > Git > **Connect Git Repository**.
+Perintah yang biasanya cuma berarti "menyimpan pekerjaan" kini menyebarkan ke
+produksi. Karena itu urutan berikut wajib, bukan anjuran:
+
+```powershell
+npm run cek
+```
+
+```powershell
+git push
+```
+
+Menyalakannya menempuh dua langkah terpisah, dan keduanya menolak dengan pesan
+yang berbeda kalau dilewati:
+
+1. **Login Connection** pada akun Vercel (Settings akun > Login Connections >
+   GitHub). Tanpa ini: *"You need to add a Login Connection to your GitHub
+   account first"*. Akun Vercel di sini dibuat lewat email, jadi awalnya tidak
+   punya sambungan apa pun.
+2. **Vercel GitHub App** diberi akses ke repo. Tanpa ini: *"Make sure there
+   aren't any typos and that you have access to the repository if it's
+   private"*. Repo privat tidak terlihat oleh Vercel sampai izinnya diberikan.
+
+Penyebaran manual tetap bisa dipakai kapan saja - berguna untuk menyebarkan
+tanpa menyentuh riwayat git:
+
+```powershell
+npx vercel deploy --prod --yes
+```
 
 Bagian 4 (pemakaian setelah hidup) belum dikerjakan.
 
