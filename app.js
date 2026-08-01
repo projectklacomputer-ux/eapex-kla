@@ -193,9 +193,18 @@ app.use((req, res, next) => {
   if (req.session && req.session.kilat) {
     res.locals.pesanSukses = req.session.kilat.sukses || null;
     res.locals.pesanGalat = req.session.kilat.galat || null;
+    res.locals.pesanIngat = req.session.kilat.ingat || null;
     delete req.session.kilat;
   }
+  // Jenis yang dikenal. Jenis di luar daftar ini dulu tersimpan ke sesi lalu
+  // hilang tanpa jejak - pesannya tidak pernah sampai ke layar dan tidak ada
+  // yang tahu. Sekarang salah ketik jenis langsung terlihat saat dikembangkan.
+  const JENIS = ['sukses', 'galat', 'ingat'];
   res.kilat = (jenis, pesan) => {
+    if (!JENIS.includes(jenis)) {
+      console.error(`[kilat] jenis tidak dikenal: "${jenis}" — pesan tidak akan tampil:`, pesan);
+      jenis = 'galat';
+    }
     if (req.session) req.session.kilat = { [jenis]: pesan };
   };
   next();

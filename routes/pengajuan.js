@@ -343,9 +343,18 @@ async function simpan(req, res, pLama) {
     }
     return res.redirect('/pengajuan/' + pengajuanId);
   }
-  res.kilat('sukses', 'Draft tersimpan'
-    + (berkas.length ? ` bersama ${berkas.length} lampiran` : '')
-    + '. Periksa sekali lagi lalu tekan "Ajukan Approval".');
+  // Draft boleh belum lengkap, tapi orangnya HARUS tahu apa yang masih kurang.
+  // Sebelumnya pesannya cuma "Draft tersimpan", sehingga orang yang mengisi lewat
+  // tombol AI mengira dokumennya sudah beres - dan baru tahu kurangnya berhari-hari
+  // kemudian saat menekan Ajukan. Daftar kekurangannya sudah dihitung di atas,
+  // hanya tidak pernah dipakai.
+  const tersimpan = 'Draft tersimpan' + (berkas.length ? ` bersama ${berkas.length} lampiran` : '');
+  if (galat.length) {
+    const sisa = galat.slice(0, 5).join('; ') + (galat.length > 5 ? `; dan ${galat.length - 5} lagi` : '');
+    res.kilat('ingat', `${tersimpan}, tapi BELUM BISA DIAJUKAN. Masih kurang: ${sisa}.`);
+  } else {
+    res.kilat('sukses', `${tersimpan} dan isinya sudah lengkap. Tekan "Ajukan Approval" untuk mengirimkannya.`);
+  }
   res.redirect('/pengajuan/' + pengajuanId);
 }
 

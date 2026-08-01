@@ -16,6 +16,7 @@
     "uji-push": "node scripts/uji-push.js",
     "uji-baca": "node scripts/uji-baca-penawaran.js",
     "uji-kabar": "node scripts/uji-kabar.js",
+    "uji-draft": "node scripts/uji-draft.js",
     "gladi": "node scripts/gladi-cabang.js",
     "tangkapan": "node scripts/ambil-tangkapan.js",
     "tutorial": "node scripts/ambil-tangkapan.js && node scripts/buat-tutorial.js"
