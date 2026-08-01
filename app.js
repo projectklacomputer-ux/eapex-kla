@@ -258,8 +258,24 @@ app.use('/admin', require('./routes/admin'));
 
 // --------------------------------------------------------------- 404 & galat
 app.use((req, res) => {
+  // Dicatat supaya 404 yang tidak masuk akal bisa DILACAK. Alamat '/' pernah
+  // menjawab 404 di produksi padahal rutenya jelas terpasang dan 200 di
+  // komputer sendiri; tanpa catatan ini tidak ada cara membedakan apakah yang
+  // datang GET atau POST, dari halaman mana, dan sedang masuk atau tidak.
+  console.warn('[404]', JSON.stringify({
+    cara: req.method,
+    jalur: req.originalUrl,
+    dari: req.get('referer') || '-',
+    jenisIsi: req.get('content-type') || '-',
+    masuk: !!(req.session && req.session.penggunaId),
+    peran: (req.pengguna && req.pengguna.peran) || '-',
+  }));
+
   if (req.path.startsWith('/api/')) return res.status(404).json({ ok: false, pesan: 'Tidak ditemukan' });
-  res.status(404).render('galat', { judul: 'Halaman tidak ditemukan', pesan: 'Alamat ' + req.path + ' tidak ada.' });
+  res.status(404).render('galat', {
+    judul: 'Halaman tidak ditemukan',
+    pesan: `Alamat ${req.method} ${req.path} tidak ada.`,
+  });
 });
 
 app.use((err, req, res, next) => {
