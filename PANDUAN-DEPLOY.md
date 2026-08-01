@@ -3,6 +3,24 @@
 Urutannya tidak boleh dibalik: Vercel butuh repo GitHub **dan** alamat basis data
 Supabase, jadi keduanya harus jadi lebih dulu.
 
+## Perintahnya dijalankan di mana
+
+**PowerShell** — yang terbuka lewat Start → ketik `powershell`. Semua perintah di
+panduan ini sudah disesuaikan untuknya.
+
+Satu hal yang perlu diketahui: PowerShell di komputer ini versi 5.1, dan versi itu
+**tidak mengenal `&&`** untuk menyambung dua perintah. Kalau Anda menemukan
+tulisan seperti `cd folder && git status` di panduan mana pun, jalankan
+terpisah — baris `cd` dulu, Enter, baru perintah berikutnya. Sudah begitu semua
+di bawah ini.
+
+Pindah ke folder aplikasi cukup **sekali** di awal; PowerShell mengingatnya
+selama jendelanya tidak ditutup:
+
+```powershell
+cd "E:\KLA\Claude\EAPEX"
+```
+
 Semua rahasia yang perlu ditempel ke Vercel sudah dibuatkan di
 `data/RAHASIA-DEPLOY.txt` (berkas itu diabaikan git, tidak akan ikut ter-push).
 
@@ -21,29 +39,32 @@ akun tanpa 2FA hanya dijaga satu sandi.
 
 ### 1.2 Sambungkan gh CLI ke akun baru
 
-Kalau di komputer ini pernah login akun lain, keluarkan dulu:
+`gh` sudah terpasang di komputer ini (`C:\Program Files\GitHub CLI\gh.exe`) —
+tidak perlu memasang apa pun.
 
-```bash
+Kalau pernah login akun lain, keluarkan dulu:
+
+```powershell
 gh auth logout
 ```
 
 Lalu masuk dengan akun baru (pilih **GitHub.com** → **HTTPS** → **Login with a
 web browser**, lalu tempel kode yang muncul di peramban):
 
-```bash
+```powershell
 gh auth login
 ```
 
 Pastikan yang aktif memang akun baru:
 
-```bash
+```powershell
 gh auth status
 ```
 
 ### 1.3 Buat repo dan dorong isinya
 
-```bash
-cd "E:\KLA\Claude\EAPEX" && gh repo create eapex-kla --private --source=. --push
+```powershell
+gh repo create eapex-kla --private --source=. --push
 ```
 
 `--private` wajib. Repo ini memuat nama pegawai, struktur cabang, dan matriks
@@ -51,8 +72,8 @@ kewenangan persetujuan.
 
 ### 1.4 Pastikan tidak ada rahasia yang ikut
 
-```bash
-cd "E:\KLA\Claude\EAPEX" && git ls-files -- "data/*" ":!data/**/.gitkeep" ":!data/.gitkeep"
+```powershell
+git ls-files -- "data/*" ":!data/**/.gitkeep" ":!data/.gitkeep"
 ```
 
 **Harus kosong.** Kalau ada yang muncul, berhenti — jangan lanjut ke Vercel —
