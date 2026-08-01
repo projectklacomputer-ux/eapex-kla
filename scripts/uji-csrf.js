@@ -55,12 +55,37 @@ function ambil(url, o = {}) {
   });
 }
 
-const kirim = (base, jalur, isi, kue) => {
-  const body = new URLSearchParams(isi).toString();
+// Toples cookie sederhana yang MENGGABUNG, bukan mengganti. Peramban bekerja
+// begitu; uji yang mengganti seluruh toples tiap tanggapan akan membuang cookie
+// yang tidak ikut dikirim ulang - dan lalu menuduh aplikasinya yang salah.
+function buatToples() {
+  const isi = new Map();
+  return {
+    telan(res) {
+      for (const baris of (res.headers['set-cookie'] || [])) {
+        const p = baris.split(';')[0];
+        const s = p.indexOf('=');
+        if (s > 0) isi.set(p.slice(0, s), p.slice(s + 1));
+      }
+    },
+    get header() { return [...isi].map(([k, v]) => `${k}=${v}`).join('; '); },
+    hapus(nama) { isi.delete(nama); },
+  };
+}
+
+const kirim = (base, jalur, data, toples) => {
+  const body = new URLSearchParams(data).toString();
   return ambil(base + jalur, { method: 'POST', body,
     headers: { 'content-type': 'application/x-www-form-urlencoded',
-      'content-length': Buffer.byteLength(body), cookie: kue } });
+      'content-length': Buffer.byteLength(body), cookie: toples.header } })
+    .then(r => { toples.telan(r); return r; });
 };
+
+const buka = (base, jalur, toples) =>
+  ambil(base + jalur, { headers: { cookie: toples.header } })
+    .then(r => { toples.telan(r); return r; });
+
+const tokenDi = teks => (/name="_csrf" value="([^"]+)"/.exec(teks) || [])[1] || null;
 
 (async () => {
   await siapkan({ senyap: true });
@@ -69,62 +94,62 @@ const kirim = (base, jalur, isi, kue) => {
   await new Promise(r => server.once('listening', r));
   const base = `http://127.0.0.1:${PORT}`;
 
-  const r1 = await ambil(base + '/login');
-  let kue = (r1.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
-  const tokMasuk = /name="_csrf" value="([^"]+)"/.exec(r1.teks)[1];
+  const toples = buatToples();
+  const r1 = await buka(base, '/login', toples);
   const r2 = await kirim(base, '/login',
-    { _csrf: tokMasuk, tujuan: '/', email: 'sm.smg@kla.co.id', sandi: SANDI }, kue);
-  kue = (r2.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ') || kue;
-  cek('berhasil masuk', r2.status === 302);
+    { _csrf: tokenDi(r1.teks), tujuan: '/', email: 'sm.smg@kla.co.id', sandi: SANDI }, toples);
+  cek('berhasil masuk', r2.status === 302, 'status ' + r2.status);
 
   console.log('\n\x1b[1mTOKEN TETAP SAMA SEPANJANG SESI\x1b[0m\n');
-  const a = await ambil(base + '/pengajuan/baru/CAPEX', { headers: { cookie: kue } });
-  const b = await ambil(base + '/pengajuan/baru/CAPEX', { headers: { cookie: kue } });
-  const tokA = /name="_csrf" value="([^"]+)"/.exec(a.teks)[1];
-  const tokB = /name="_csrf" value="([^"]+)"/.exec(b.teks)[1];
+  const tokA = tokenDi((await buka(base, '/pengajuan/baru/CAPEX', toples)).teks);
+  const tokB = tokenDi((await buka(base, '/pengajuan/baru/CAPEX', toples)).teks);
   cek('dua kali buka halaman, token sama', tokA === tokB);
   cek('token tidak sepele ditebak', tokA.length >= 32, tokA.length + ' huruf');
 
   console.log('\n\x1b[1mTOKEN TIDAK DISIMPAN DI SESI\x1b[0m\n');
-  // Inilah inti perbaikannya: kalau token ada di dalam sesi, permintaan yang
-  // berjalan bersamaan bisa menimpanya.
   const barisSesi = await db.all('SELECT sess FROM sesi');
-  const adaDiSesi = barisSesi.some(s => /"csrf"/.test(s.sess || ''));
-  cek('tidak ada token tersimpan di baris sesi', !adaDiSesi,
+  cek('tidak ada token tersimpan di baris sesi',
+    !barisSesi.some(x => /"csrf"/.test(x.sess || '')),
     'kalau tersimpan, permintaan bersamaan bisa menghapusnya');
 
-  console.log('\n\x1b[1mSESI DITIMPA PERMINTAAN LAIN — TOKEN HARUS BERTAHAN\x1b[0m\n');
-  // Tiru persis kejadiannya: tulis ulang baris sesi tanpa medan csrf, seperti
-  // yang dilakukan permintaan latar yang membaca sesi versi lama.
-  for (const s of barisSesi) {
-    const isi = JSON.parse(s.sess);
-    delete isi.csrf;
-    await db.run('UPDATE sesi SET sess = ? WHERE sess = ?', [JSON.stringify(isi), s.sess]);
+  console.log('\n\x1b[1mSESI DITIMPA PERMINTAAN BERSAMAAN\x1b[0m\n');
+  for (const x of barisSesi) {
+    const isi = JSON.parse(x.sess); delete isi.csrf;
+    await db.run('UPDATE sesi SET sess = ? WHERE sess = ?', [JSON.stringify(isi), x.sess]);
   }
-  const c = await ambil(base + '/pengajuan/baru/CAPEX', { headers: { cookie: kue } });
-  const tokC = /name="_csrf" value="([^"]+)"/.exec(c.teks)[1];
-  cek('token TETAP SAMA setelah sesi ditimpa', tokC === tokA,
-    'inilah bug yang membuat "Token keamanan tidak cocok" berulang');
+  const tokC = tokenDi((await buka(base, '/pengajuan/baru/CAPEX', toples)).teks);
+  cek('token bertahan', tokC === tokA);
+  const sah = await kirim(base, '/notifikasi/dibaca', { _csrf: tokC }, toples);
+  cek('kiriman formulir diterima', sah.status !== 403, 'status ' + sah.status);
 
-  const sah = await kirim(base, '/notifikasi/dibaca', { _csrf: tokC }, kue);
-  cek('kiriman formulir tetap diterima', sah.status !== 403 && !/Token keamanan tidak cocok/.test(sah.teks),
-    'status ' + sah.status);
+  console.log('\n\x1b[1mID SESI BERGANTI — TOKEN HARUS TETAP SAH\x1b[0m\n');
+  // 'DELETE FROM sesi' persis yang dijalankan saat Administrator menyetel ulang
+  // sandi orang lain; regenerate() dijalankan setiap kali orang masuk.
+  await db.run('DELETE FROM sesi');
+  const lagi = await buka(base, '/login', toples);
+  cek('token bertahan walau SELURUH sesi dihapus', tokenDi(lagi.teks) === tokA,
+    'inilah yang terjadi tiap Administrator menyetel ulang sandi orang');
 
-  console.log('\n\x1b[1mTOKEN PALSU TETAP DITOLAK\x1b[0m\n');
-  const palsu = await kirim(base, '/notifikasi/dibaca', { _csrf: 'a'.repeat(48) }, kue);
-  cek('token karangan ditolak', /Token keamanan tidak cocok/.test(palsu.teks) || palsu.status === 403,
-    'status ' + palsu.status);
-  const kosong = await kirim(base, '/notifikasi/dibaca', {}, kue);
-  cek('tanpa token ditolak', /Token keamanan tidak cocok/.test(kosong.teks) || kosong.status === 403);
+  const masukLagi = await kirim(base, '/login',
+    { _csrf: tokA, tujuan: '/', email: 'sm.smg@kla.co.id', sandi: SANDI }, toples);
+  cek('masuk lagi memakai token dari halaman lama', masukLagi.status === 302,
+    'status ' + masukLagi.status);
+  const tokSesudah = tokenDi((await buka(base, '/pengajuan/baru/CAPEX', toples)).teks);
+  cek('token tetap sama sesudah masuk ulang', tokSesudah === tokA,
+    'regenerate() mengganti ID sesi, token tidak boleh ikut berganti');
 
-  console.log('\n\x1b[1mSESI LAIN PUNYA TOKEN BERBEDA\x1b[0m\n');
-  const lain = await ambil(base + '/login');
-  const kueLain = (lain.headers['set-cookie'] || []).map(x => x.split(';')[0]).join('; ');
-  const tokLain = /name="_csrf" value="([^"]+)"/.exec(lain.teks)[1];
-  cek('token sesi lain berbeda', tokLain !== tokA);
-  const silang = await kirim(base, '/notifikasi/dibaca', { _csrf: tokLain }, kue);
-  cek('token milik sesi lain ditolak', /Token keamanan tidak cocok/.test(silang.teks) || silang.status === 403,
-    'kalau diterima, tokennya tidak terikat sesi sama sekali');
+  console.log('\n\x1b[1mYANG TIDAK SAH TETAP DITOLAK\x1b[0m\n');
+  const palsu = await kirim(base, '/notifikasi/dibaca', { _csrf: 'a'.repeat(48) }, toples);
+  cek('token karangan ditolak', palsu.status === 403);
+  const kosong = await kirim(base, '/notifikasi/dibaca', {}, toples);
+  cek('tanpa token ditolak', kosong.status === 403);
+
+  const orangLain = buatToples();
+  const lain = await buka(base, '/login', orangLain);
+  cek('peramban lain dapat token berbeda', tokenDi(lain.teks) !== tokA);
+  const silang = await kirim(base, '/notifikasi/dibaca', { _csrf: tokenDi(lain.teks) }, toples);
+  cek('token milik peramban lain ditolak', silang.status === 403,
+    'kalau diterima, tokennya tidak terikat siapa pun');
 
   console.log(`\n\x1b[1m  ${lulus} lulus, ${gagal} gagal\x1b[0m\n`);
   await new Promise(r => server.close(r));

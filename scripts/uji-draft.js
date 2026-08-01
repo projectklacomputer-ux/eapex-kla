@@ -62,6 +62,19 @@ function borang(isi) {
   return { body, panjang: Buffer.byteLength(body) };
 }
 
+// Toples cookie yang MENGGABUNG, seperti peramban. Mengganti seluruh toples
+// tiap tanggapan akan membuang cookie yang tidak ikut dikirim ulang - misalnya
+// cookie token CSRF yang hanya terbit sekali - lalu menuduh aplikasinya salah.
+const toples = new Map();
+function telan(res) {
+  for (const b of (res.headers['set-cookie'] || [])) {
+    const p = b.split(';')[0];
+    const s = p.indexOf('=');
+    if (s > 0) toples.set(p.slice(0, s), p.slice(s + 1));
+  }
+}
+const kueHeader = () => [...toples].map(([k, v]) => `${k}=${v}`).join('; ');
+
 (async () => {
   await siapkan({ senyap: true });
   await db.run('UPDATE pengguna SET sandi_hash = ?, wajib_ganti_sandi = 0', [bcrypt.hashSync(SANDI, 10)]);
@@ -72,14 +85,14 @@ function borang(isi) {
 
   // masuk
   const r1 = await ambil(base + '/login');
-  let kue = (r1.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+  telan(r1);
   const tokMasuk = /name="_csrf" value="([^"]+)"/.exec(r1.teks)[1];
   const m = borang({ _csrf: tokMasuk, tujuan: '/', email: 'sm.smg@kla.co.id', sandi: SANDI });
   const r2 = await ambil(base + '/login', { method: 'POST', body: m.body,
-    headers: { 'content-type': 'application/x-www-form-urlencoded', 'content-length': m.panjang, cookie: kue } });
-  kue = (r2.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ') || kue;
+    headers: { 'content-type': 'application/x-www-form-urlencoded', 'content-length': m.panjang, cookie: kueHeader() } });
+  telan(r2);
 
-  const f = await ambil(base + '/pengajuan/baru/CAPEX', { headers: { cookie: kue } });
+  const f = await ambil(base + '/pengajuan/baru/CAPEX', { headers: { cookie: kueHeader() } });
   const tok = /name="_csrf" value="([^"]+)"/.exec(f.teks)[1];
   const kategoriId = /name="kategori_id" value="([^"]+)"/.exec(f.teks)[1];
   const aturanId = /name="aturan_id" value="([^"]+)"/.exec(f.teks)[1];
@@ -96,8 +109,9 @@ function borang(isi) {
   const simpanDraft = async isi => {
     const b = borang(isi);
     const s = await ambil(base + '/pengajuan', { method: 'POST', body: b.body,
-      headers: { 'content-type': 'application/x-www-form-urlencoded', 'content-length': b.panjang, cookie: kue } });
-    const h = await ambil(base + s.headers.location, { headers: { cookie: kue } });
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'content-length': b.panjang, cookie: kueHeader() } });
+    telan(s);
+    const h = await ambil(base + s.headers.location, { headers: { cookie: kueHeader() } });
     return { simpan: s, halaman: h };
   };
 
