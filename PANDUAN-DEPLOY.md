@@ -42,24 +42,69 @@ akun tanpa 2FA hanya dijaga satu sandi.
 `gh` sudah terpasang di komputer ini (`C:\Program Files\GitHub CLI\gh.exe`) —
 tidak perlu memasang apa pun.
 
-Kalau pernah login akun lain, keluarkan dulu:
+> **JANGAN jalankan `gh auth logout`.** Di komputer ini sudah ada akun
+> `kristiantokla-arch` (dipakai untuk repo lain). `gh` sanggup memegang
+> beberapa akun sekaligus, jadi akun EAPEX cukup **ditambahkan**, bukan
+> menggantikan. Logout hanya akan memutus akses ke repo yang lain tanpa perlu.
 
-```powershell
-gh auth logout
-```
-
-Lalu masuk dengan akun baru (pilih **GitHub.com** → **HTTPS** → **Login with a
-web browser**, lalu tempel kode yang muncul di peramban):
+Tambahkan akun EAPEX (pilih **GitHub.com** → **HTTPS** → **Login with a web
+browser**, lalu tempel kode yang muncul di peramban):
 
 ```powershell
 gh auth login
 ```
 
-Pastikan yang aktif memang akun baru:
+Sekarang ada dua akun. Lihat mana yang sedang aktif:
 
 ```powershell
 gh auth status
 ```
+
+Pindah ke akun EAPEX — ganti `NAMA-AKUN-ANDA` dengan nama akun GitHub Anda:
+
+```powershell
+gh auth switch --user NAMA-AKUN-ANDA
+```
+
+**Yang aktif saat langkah 1.3 dijalankan itulah pemilik repo `eapex-kla`.**
+Pastikan `gh auth status` menunjukkan `Active account: true` di akun yang benar
+sebelum lanjut.
+
+Nanti kalau mau kembali mengurus repo yang lain:
+`gh auth switch --user kristiantokla-arch`
+
+### 1.2b Pastikan nama penulis commit juga akun yang benar
+
+Akun `gh` menentukan **siapa yang mendorong**. Email di dalam commit menentukan
+**siapa yang tercatat sebagai penulis** — dan keduanya bisa berbeda.
+
+Kalau email penulis commit terdaftar di akun lain, GitHub akan menempelkan
+foto dan nama akun itu di setiap commit, walaupun repo-nya milik akun Anda.
+Reponya terpisah, riwayatnya tidak.
+
+Lihat email yang sekarang dipakai repo ini:
+
+```powershell
+git config user.email
+```
+
+Kalau itu bukan email akun EAPEX, setel ulang **khusus repo ini** (tanpa
+`--global`, supaya repo lain tidak ikut berubah):
+
+```powershell
+git config user.name "Nama Anda"
+```
+
+```powershell
+git config user.email "EMAIL-AKUN-EAPEX"
+```
+
+Cara paling aman adalah memakai alamat samaran dari GitHub sehingga email asli
+tidak tersebar di riwayat publik: Settings → Emails → centang **Keep my email
+address private**, lalu salin alamat `…@users.noreply.github.com` di situ.
+
+Commit yang **sudah terlanjur** dibuat tetap memakai email lama. Selama belum
+di-push, penulisnya masih bisa ditulis ulang — minta saya melakukannya.
 
 ### 1.3 Buat repo dan dorong isinya
 
