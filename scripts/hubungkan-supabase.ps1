@@ -5,7 +5,7 @@
 #  SANDI BASIS DATA SUPABASE saja, satu baris.
 #
 #  Skrip ini merangkai alamat sambungannya sendiri, jadi tidak ada teks panjang
-#  yang perlu disunting tangan — di situlah kesalahan paling sering terjadi.
+#  yang perlu disunting tangan - di situlah kesalahan paling sering terjadi.
 #  Sandi dikodekan otomatis, sehingga karakter seperti @ : / # tidak merusak
 #  struktur alamat.
 #
@@ -180,7 +180,7 @@ Baik "Tabel terisi di Supabase"
 # --- 7. rapikan --------------------------------------------------------------
 Judul "7. Merapikan"
 
-# Jumlah akun dibaca dari keluaran seed, bukan ditulis kaku — supaya angka yang
+# Jumlah akun dibaca dari keluaran seed, bukan ditulis kaku - supaya angka yang
 # dilaporkan selalu sama dengan isi basis data walau daftar peran berubah.
 $jmlAkun = if ($teks -match 'Pengguna:\s*(\d+)') { $Matches[1] } else { '?' }
 

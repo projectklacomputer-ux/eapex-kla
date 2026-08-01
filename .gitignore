@@ -24,3 +24,6 @@ data/lampiran/*
 .DS_Store
 Thumbs.db
 *.tmp
+
+.vercel
+.env*

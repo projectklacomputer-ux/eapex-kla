@@ -1,5 +1,44 @@
 # Panduan Deploy EAPEX — langkah demi langkah
 
+## SUDAH TERPASANG — 1 Agustus 2026
+
+| | |
+|---|---|
+| Alamat | <https://eapex-kla.vercel.app> |
+| GitHub | <https://github.com/projectklacomputer-ux/eapex-kla> (Private) |
+| Basis data | Supabase `eapex-kla`, wilayah Singapura |
+| Akun Vercel | `projectklacomputer-3886` |
+| Terverifikasi | `/api/health` -> `{"ok":true,"db":"pg"}`, `/login` membuka halaman masuk |
+
+Seluruh Bagian 1-3 di bawah **sudah dikerjakan** lewat dua skrip:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\hubungkan-supabase.ps1
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\hubungkan-vercel.ps1
+```
+
+Keduanya aman dijalankan ulang. Yang perlu disiapkan sebelum menjalankan:
+`data\sandi.txt` berisi sandi basis data Supabase saja, satu baris.
+
+### Yang masih menggantung
+
+**Penyebaran otomatis dari GitHub belum aktif.** `vercel git connect` ditolak
+dengan pesan *"You need to add a Login Connection to your GitHub account first"*
+- akun Vercel-nya belum punya sambungan masuk lewat GitHub.
+
+Sampai itu disetel, perubahan kode disebarkan dengan menjalankan ulang
+`scripts\hubungkan-vercel.ps1`, bukan dengan `git push`.
+
+Cara menyalakannya: Vercel > Settings akun > **Login Connections** > tambahkan
+GitHub, lalu Project `eapex-kla` > Settings > Git > **Connect Git Repository**.
+
+Bagian 4 (pemakaian setelah hidup) belum dikerjakan.
+
+---
+
 Akun: **`projectklacomputer-ux`** (GitHub) · project **`eapex-kla`**
 
 ---
