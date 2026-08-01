@@ -119,10 +119,14 @@ function borang(isi) {
   const belumTua = await pengingat.jalankan({ paksa: true });
   cek('draft yang baru dibuat BELUM diingatkan', belumTua.draft === 0, 'draft=' + belumTua.draft);
 
-  const tigaHari = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
-  await db.run("UPDATE pengajuan SET diperbarui = ? WHERE status = 'draft'", [tigaHari]);
+  // Ditua-kan ke 29 jam: sudah lewat ambang PERINGATAN (1 hari) tapi belum
+  // lewat ambang HAPUS (2 hari). Kalau langsung 3 hari, yang terjadi
+  // penghapusan - dan yang diuji di bagian ini bukan itu.
+  const seharilebih = new Date(Date.now() - 29 * 3600 * 1000).toISOString();
+  await db.run("UPDATE pengajuan SET diperbarui = ? WHERE status = 'draft'", [seharilebih]);
 
   const sesudah = await pengingat.jalankan({ paksa: true });
+  cek('belum dihapus - baru diperingatkan', sesudah.draftDihapus === 0, 'dihapus=' + sesudah.draftDihapus);
   cek('draft yang didiamkan ikut terhitung', sesudah.draft === 2, 'draft=' + sesudah.draft);
   cek('diingatkan ke pemiliknya sendiri', sesudah.draftPenerima === 1, 'penerima=' + sesudah.draftPenerima);
 
@@ -132,6 +136,51 @@ function borang(isi) {
   if (lonceng.length) {
     cek('menjelaskan draft belum sampai ke siapa pun', /belum sampai ke siapa pun/.test(lonceng[0].pesan || ''));
     cek('menjelaskan draft belum punya nomor', /belum punya nomor/i.test(lonceng[0].pesan || ''));
+  }
+
+  console.log('\n\x1b[1mPENGHAPUSAN DRAFT LEWAT TENGGAT\x1b[0m\n');
+  // Pasang lampiran ber-ISI supaya bisa dibuktikan isinya ikut hilang, bukan
+  // cuma baris penunjuknya. Isi lampiran menghuni basis data - itu yang mahal.
+  const simpanan = require('../lib/simpanan');
+  const { id } = require('../lib/auth');
+  const draftAda = await db.all("SELECT id FROM pengajuan WHERE status = 'draft'");
+  const namaSimpan = 'uji-lampiran-' + Date.now() + '.pdf';
+  await db.run(
+    `INSERT INTO lampiran (id, pengajuan_id, nama_asli, nama_simpan, mime, ukuran, pengunggah_id, dibuat)
+     VALUES (?,?, 'Penawaran.pdf', ?, 'application/pdf', 2048, NULL, ?)`,
+    [id(), draftAda[0].id, namaSimpan, new Date().toISOString()]);
+  if (simpanan.diDb()) {
+    await simpanan.siapkan();
+    await db.run('INSERT INTO lampiran_isi (nama_simpan, isi_base64, dibuat) VALUES (?,?,?)',
+      [namaSimpan, Buffer.from('isi berkas contoh').toString('base64'), new Date().toISOString()]);
+  }
+
+  const tigaHariLagi = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
+  await db.run("UPDATE pengajuan SET diperbarui = ? WHERE status = 'draft'", [tigaHariLagi]);
+
+  const hapus = await pengingat.jalankan({ paksa: true });
+  cek('draft lewat tenggat dihapus', hapus.draftDihapus === 2, 'dihapus=' + hapus.draftDihapus);
+
+  const sisaDraft = Number(await db.nilai("SELECT COUNT(*) AS n FROM pengajuan WHERE status = 'draft'"));
+  cek('tidak ada draft tersisa di basis data', sisaDraft === 0, sisaDraft + ' tersisa');
+
+  const sisaLampiran = Number(await db.nilai('SELECT COUNT(*) AS n FROM lampiran'));
+  cek('baris lampiran ikut terhapus', sisaLampiran === 0, sisaLampiran + ' tersisa');
+
+  if (simpanan.diDb()) {
+    const sisaIsi = Number(await db.nilai('SELECT COUNT(*) AS n FROM lampiran_isi WHERE nama_simpan = ?', [namaSimpan]));
+    cek('ISI lampiran ikut terhapus dari basis data', sisaIsi === 0,
+      'tanpa ini, berkasnya menghuni Supabase selamanya tanpa ada yang menunjuk kepadanya');
+  }
+
+  const sisaItem = Number(await db.nilai('SELECT COUNT(*) AS n FROM pengajuan_item'));
+  cek('rincian barang ikut terhapus', sisaItem === 0, sisaItem + ' tersisa');
+
+  const kabarHapus = await db.all("SELECT * FROM notifikasi WHERE judul LIKE '%dihapus%'");
+  cek('pembuatnya diberi tahu draftnya dihapus', kabarHapus.length > 0);
+  if (kabarHapus.length) {
+    cek('dijelaskan tidak ada nomor dokumen yang hilang',
+      /belum pernah punya nomor/i.test(kabarHapus[0].pesan || ''));
   }
 
   console.log(`\n\x1b[1m  ${lulus} lulus, ${gagal} gagal\x1b[0m\n`);
