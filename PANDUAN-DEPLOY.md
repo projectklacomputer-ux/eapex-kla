@@ -1,262 +1,368 @@
-# Panduan Deploy EAPEX — GitHub → Supabase → Vercel
+# Panduan Deploy EAPEX — langkah demi langkah
 
-Semuanya dikerjakan lewat **situs**. PowerShell hanya dipakai di Bagian 1 untuk
-mendorong berkasnya; Bagian 2 dan 3 murni klik-klik di peramban.
-
-Urutannya tidak boleh dibalik: Vercel butuh repo GitHub **dan** alamat basis
-data Supabase, jadi keduanya harus jadi lebih dulu.
-
-Akun yang dipakai: **`projectklacomputer-ux`**.
-Rahasia yang perlu ditempel ke Vercel sudah dibuatkan di
-`data/RAHASIA-DEPLOY.txt` (diabaikan git, tidak akan ikut ter-push).
+Akun: **`projectklacomputer-ux`** (GitHub) · project **`eapex-kla`**
 
 ---
 
-## Sebelum mulai — soal PowerShell
+## Mana yang butuh PowerShell, mana yang tidak
 
-Buka lewat Start → ketik `powershell`.
+| Bagian | Dikerjakan di | Butuh PowerShell? |
+|---|---|---|
+| **1. GitHub** | situs + PowerShell | **Ya**, 3 perintah — ✅ **SUDAH SELESAI** |
+| **2. Supabase** | situs, lalu PowerShell | **Ya**, 7 perintah (langkah 8–14) |
+| **3. Vercel** | situs saja | **Tidak sama sekali** |
+| **4. Sesudah hidup** | situs saja | **Tidak sama sekali** |
 
-PowerShell di komputer ini versi 5.1, dan versi itu **tidak mengenal `&&`**
-untuk menyambung dua perintah. Semua perintah di bawah sudah dipisah satu-satu:
-ketik, Enter, tunggu selesai, baru baris berikutnya.
+Jadi PowerShell hanya dipakai di **Bagian 2**. Selebihnya klik-klik di peramban.
 
-Pindah ke folder aplikasi cukup **sekali**; PowerShell mengingatnya selama
-jendelanya tidak ditutup:
+### Cara membuka PowerShell
+
+Tekan tombol Windows → ketik `powershell` → Enter. Jendela biru/hitam terbuka.
+
+Aturan penting di komputer ini:
+
+- **Satu baris satu perintah.** Ketik, Enter, tunggu selesai, baru baris berikutnya.
+- **Jangan menyambung dengan `&&`.** PowerShell versi 5.1 di sini menolaknya
+  dan langsung error.
+- **Jangan tutup jendelanya di tengah Bagian 2.** Variabel yang dipasang di
+  langkah 10–11 hilang begitu jendelanya ditutup.
+
+---
+
+# BAGIAN 1 — GitHub ✅ SELESAI
+
+Sudah dikerjakan. Catatan untuk arsip:
+
+- Repo: <https://github.com/projectklacomputer-ux/eapex-kla> (Private)
+- 8 commit terdorong, `main` melacak `origin/main`
+- Isi `data/` di GitHub hanya dua `.gitkeep` kosong — tidak ada `.env`,
+  `AKUN-AWAL.txt`, `.docx`, atau `.db` yang ikut
+- Alamat remote memakai sisipan nama akun
+  (`https://projectklacomputer-ux@github.com/…`) supaya kredensialnya tersimpan
+  terpisah dari akun `kristiantokla-arch` yang juga ada di komputer ini
+
+Lanjut ke Bagian 2.
+
+---
+
+# BAGIAN 2 — Supabase
+
+## 🌐 Langkah 1 — Buat project
+
+1. Buka **<https://database.new>** (alamat pintas resmi Supabase).
+2. Kalau diminta membuat **organization** dulu: Name `KLA`, Type `Company`,
+   Plan **Free**.
+3. Formulir project terbuka. Isi:
+   - **Name**: `eapex-kla`
+   - **Database Password**: klik **Generate a password**
+   - **Region**: **Southeast Asia (Singapore)**
+4. **Salin sandi itu dan simpan sendiri sekarang juga.** Hanya ditampilkan
+   sekali. Kalau telanjur hilang: Settings → Database → **Reset database password**.
+5. Klik **Create new project**. Tunggu ±2 menit sampai statusnya hijau.
+
+## 🌐 Langkah 2 — Ambil alamat sambungan
+
+1. Klik tombol **Connect** di bagian atas halaman project.
+2. Dari lima pilihan (Framework / Server / Direct / ORM / MCP), pilih
+   **Direct — Connection string**.
+3. Di dalamnya ada beberapa jenis. Ambil **Transaction pooler**.
+
+   Nama tabnya bisa berbeda antar tampilan, tapi ciri ini tidak pernah berubah:
+
+   | Jenis | Ciri | Pakai? |
+   |---|---|---|
+   | Direct connection | `db.xxxx.supabase.co:` **5432** | ❌ |
+   | **Transaction pooler** | `…pooler.supabase.com:` **6543** | ✅ |
+   | Session pooler | `…pooler.supabase.com:` 5432 | ❌ |
+
+   **Patokannya angka 6543.** Kalau yang tersalin berujung 5432, gejalanya nanti
+   bukan pesan galat melainkan halaman yang menggantung diam — susah dilacak
+   kalau tidak tahu sebabnya.
+
+4. Salin. Bentuknya:
+
+   ```
+   postgresql://postgres.KODEPROJECT:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+   ```
+
+5. Ganti `[YOUR-PASSWORD]` dengan sandi dari Langkah 1 — **kurung sikunya ikut
+   dibuang**. Sandinya tidak ikut tersalin dari layar Supabase; harus Anda
+   tempelkan sendiri.
+
+> Alamat jadi ini memuat sandi basis data. Simpan sendiri, jangan dikirim ke
+> siapa pun.
+
+## Kenapa tabelnya diisi dari komputer sendiri, bukan langsung dari Vercel
+
+Langkah 8–13 di bawah bisa saja dilewati — Vercel akan mengisi tabelnya sendiri
+saat pertama kali dibuka. Tapi ada satu akibat yang tidak bisa diperbaiki
+belakangan.
+
+Saat basis data pertama kali diisi, sistem membuat **28 akun dengan sandi acak**
+dan mencatatnya ke sebuah berkas. Kalau itu terjadi di Vercel, berkas itu ikut
+terhapus bersama cakramnya — dan 27 sandi selain admin **hilang permanen**.
+Anda harus menyetel ulang satu per satu lewat menu Admin.
+
+Kalau dijalankan dari sini, berkasnya mendarat utuh di komputer Anda.
+
+Sekalian membuktikan alamat sambungannya benar **sebelum** Vercel ikut campur,
+supaya kalau ada masalah jelas letaknya di mana.
+
+## 💻 Langkah 3 — Buka PowerShell dan masuk ke folder
 
 ```powershell
 cd "E:\KLA\Claude\EAPEX"
 ```
 
----
+Tidak ada keluaran apa-apa kalau berhasil. Kalau muncul `Cannot find path`,
+berarti foldernya bukan di situ.
 
-## BAGIAN 1 — GitHub
+## 💻 Langkah 4 — Amankan berkas akun lokal
 
-### 1.1 Buat repo kosong lewat situs
-
-1. Buka <https://github.com>, pastikan yang masuk adalah **`projectklacomputer-ux`**
-   (klik foto profil di kanan atas untuk memastikan).
-2. Tombol **+** di kanan atas → **New repository**.
-3. Isi:
-   - **Owner**: `projectklacomputer-ux`
-   - **Repository name**: `eapex-kla`
-   - **Private** ← wajib. Repo ini memuat nama pegawai, struktur cabang, dan
-     matriks kewenangan persetujuan.
-4. **Jangan centang apa pun** di bagian "Initialize this repository with":
-   tanpa README, tanpa .gitignore, tanpa license.
-
-   > Repo harus benar-benar kosong. Kalau ada satu berkas saja di dalamnya,
-   > dorongan di langkah 1.3 akan **ditolak** karena riwayatnya bentrok.
-
-5. **Create repository**. Halaman berikutnya menampilkan beberapa perintah —
-   abaikan, pakai yang di panduan ini.
-
-Sekalian nyalakan **2FA** kalau belum: Settings → Password and authentication.
-Repo ini berisi seluruh alur persetujuan pengeluaran perusahaan.
-
-### 1.2 Pastikan tidak ada rahasia yang ikut
+Berkas baru nanti bernama sama dan akan menimpanya. Di dalamnya ada sandi 28
+akun untuk sistem lokal Anda.
 
 ```powershell
-git ls-files -- "data/*" ":!data/**/.gitkeep" ":!data/.gitkeep"
+Rename-Item data\AKUN-AWAL.txt AKUN-AWAL-LOKAL.txt
 ```
 
-**Harus kosong.** Kalau ada yang muncul, berhenti — jangan lanjut — dan beri
-tahu saya. Dua berkas `.gitkeep` yang mungkin tampak di daftar lain memang
-sengaja ada dan isinya kosong; gunanya supaya folder `data/` tetap ada setelah
-repo di-clone.
+Kalau muncul `Cannot find path`, berarti berkasnya sudah pernah dipindah —
+lewati saja langkah ini.
 
-### 1.3 Sambungkan repo, lalu dorong
+## 💻 Langkah 5 — Pasang sandi admin
+
+Buka `data\RAHASIA-DEPLOY.txt` dengan Notepad, salin nilai di baris
+`ADMIN_PASSWORD=` (tanpa nama variabelnya).
 
 ```powershell
-git remote add origin https://projectklacomputer-ux@github.com/projectklacomputer-ux/eapex-kla.git
+$env:ADMIN_PASSWORD = 'tempel-nilai-di-sini'
 ```
 
-> Nama akun sengaja disisipkan sebelum `@github.com`. Windows menyimpan
-> kredensial GitHub **satu untuk semua repo**, dan di komputer ini isinya
-> `kristiantokla-arch`. Tanpa sisipan itu, `git push` akan memakai akun tersebut
-> tanpa bertanya apa pun. Dengan sisipan itu, Windows menyimpannya sebagai
-> kredensial terpisah dan kedua akun bisa hidup berdampingan.
+## 💻 Langkah 6 — Pasang alamat basis data
 
 ```powershell
-git push -u origin main
+$env:DATABASE_URL = 'tempel-alamat-lengkap-dari-langkah-2'
 ```
 
-Sebuah jendela peramban akan muncul meminta izin. **Perhatikan akun yang tertera
-di situ** — kalau yang muncul `kristiantokla-arch`, klik untuk berganti akun ke
-`projectklacomputer-ux` dulu sebelum menyetujui.
+> **Pakai petik tunggal `'…'`, jangan petik ganda.** Di PowerShell, petik ganda
+> memperlakukan `$` sebagai awal nama variabel — kalau sandi Anda mengandung
+> `$`, potongan itu hilang diam-diam dan sambungannya gagal tanpa alasan yang
+> jelas.
 
-### 1.4 Pastikan sudah benar
+Periksa sudah masuk atau belum:
 
 ```powershell
-git remote -v
+$env:DATABASE_URL.Length
 ```
 
-Lalu buka <https://github.com/projectklacomputer-ux/eapex-kla> — berkasnya harus
-sudah ada, dan ada label **Private** di sebelah nama repo.
+Harus keluar angka sekitar 100–130. Kalau kosong, ulangi langkah 6 **di jendela
+yang sama**.
 
-Buka juga folder `data/` di situs itu: isinya **hanya** `.gitkeep` dan
-`lampiran/`. Kalau ada `.env`, `AKUN-AWAL.txt`, `.docx`, atau `.db` di sana,
-hapus reponya sekarang juga dan beri tahu saya.
+## 💻 Langkah 7 — Isi tabelnya
 
-### 1.5 Catatan soal nama penulis commit (boleh dilewati)
-
-Akun GitHub menentukan **siapa yang mendorong**. Email di dalam commit
-menentukan **siapa yang tercatat sebagai penulis** — dan keduanya berjalan
-sendiri-sendiri.
-
-Enam commit yang sudah ada tertulis atas nama
-`KLA Computer <projectklacomputer@gmail.com>`. Commit **berikutnya** sudah saya
-setel memakai alamat samaran akun baru
-(`311638400+projectklacomputer-ux@users.noreply.github.com`), khusus repo ini
-saja — repo lain tidak ikut berubah.
-
-Kalau email `projectklacomputer@gmail.com` itu terdaftar di akun
-`kristiantokla-arch`, keenam commit lama akan menempel nama dan foto akun
-tersebut di riwayat, walaupun reponya milik akun baru. Cara memeriksanya: masuk
-sebagai `projectklacomputer-ux` → Settings → Emails, lihat alamat itu terdaftar
-di situ atau tidak.
-
-Kalau ternyata salah akun dan Anda ingin riwayatnya bersih, **beri tahu saya
-sebelum langkah 1.3** — sesudah ter-push, memperbaikinya jauh lebih repot.
-Kalau tidak dipedulikan, lewati saja bagian ini; tidak ada akibat teknis apa pun.
-
----
-
-## BAGIAN 2 — Supabase (basis data)
-
-### 2.1 Buat project
-
-1. <https://supabase.com> → **Sign in**.
-2. **New project**
-   - Name: `eapex-kla`
-   - Database Password: klik **Generate a password**, lalu **salin dan simpan
-     sendiri**. Sandi ini hanya ditampilkan sekali dan dipakai di langkah 2.2.
-   - Region: **Southeast Asia (Singapore)** — paling dekat, paling kecil jedanya.
-3. **Create new project**, tunggu ±2 menit sampai statusnya hijau.
-
-### 2.2 Ambil alamat sambungan
-
-Tombol **Connect** di bagian atas → pilih **Transaction pooler**.
-
-Bentuknya seperti ini:
-
-```
-postgresql://postgres.abcdefgh:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+```powershell
+npm run seed
 ```
 
-Ganti `[YOUR-PASSWORD]` dengan sandi dari langkah 2.1. Simpan hasilnya — ini
-nilai `DATABASE_URL` di Bagian 3.
+Yang diharapkan muncul:
 
-> **Port 6543, bukan 5432.** Vercel membuat banyak sambungan pendek. Koneksi
-> langsung (5432) akan cepat penuh, dan gejalanya bukan pesan galat yang jelas
-> melainkan halaman yang menggantung tanpa keterangan.
+```
+Selesai. Basis data: pg. Pengguna: 28. Kategori: ...
+```
 
-### 2.3 Tabel
+**Perhatikan kata `pg`.** Kalau tertulis `sqlite`, berarti `DATABASE_URL` tidak
+terbaca dan yang barusan terisi adalah basis data lokal — bukan Supabase.
+Ulangi langkah 6.
 
-Tidak perlu membuat apa pun. Aplikasi membuat seluruh tabelnya sendiri saat
-pertama kali dijalankan.
+## 💻 Langkah 8 — Simpan berkas sandi yang baru
+
+```powershell
+Rename-Item data\AKUN-AWAL.txt AKUN-AWAL-SUPABASE.txt
+```
+
+## 💻 Langkah 9 — Kembalikan berkas yang lama
+
+```powershell
+Rename-Item data\AKUN-AWAL-LOKAL.txt AKUN-AWAL.txt
+```
+
+Sekarang ada dua berkas terpisah, keduanya di dalam `data/` sehingga tidak akan
+pernah ikut ter-push:
+
+- `data\AKUN-AWAL-SUPABASE.txt` — 28 akun untuk sistem **online**
+- `data\AKUN-AWAL.txt` — 28 akun untuk sistem **lokal**, utuh seperti semula
+
+## 💻 Langkah 10 — Lepas sambungan produksi
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+Ini bukan formalitas. Selama variabel itu menempel, `localhost:4700` akan
+**mengoperasikan basis data produksi** — termasuk `npm run cek`. Menutup jendela
+PowerShell juga menghapusnya.
+
+Bagian 2 selesai. Sisanya tidak perlu PowerShell lagi.
 
 ---
 
-## BAGIAN 3 — Vercel
+# BAGIAN 3 — Vercel (peramban saja)
 
-### 3.1 Beri Vercel akses ke akun GitHub yang benar
+## 🌐 Langkah 11 — Masuk dan beri izin ke akun yang benar
 
 1. <https://vercel.com> → **Sign in** → **Continue with GitHub**.
-2. Kalau Vercel sudah pernah tersambung ke `kristiantokla-arch`, repo
-   `eapex-kla` tidak akan muncul di daftar. Buka **Add New… → Project** →
+2. Pastikan yang dipakai akun **`projectklacomputer-ux`**.
+3. **Add New… → Project**.
+4. Kalau `eapex-kla` **tidak muncul** di daftar: klik
    **Adjust GitHub App Permissions** → pilih akun `projectklacomputer-ux` →
-   izinkan aksesnya (boleh hanya untuk repo `eapex-kla`).
+   izinkan (boleh hanya untuk repo `eapex-kla`) → kembali.
 
-### 3.2 Impor repo
+   Ini penyebab tersering repo tidak kelihatan, dan gejalanya cuma "tidak ada di
+   daftar" tanpa penjelasan.
 
-1. **Add New… → Project** → pilih `eapex-kla` → **Import**.
-2. Framework Preset: **Other**. Build/Output/Install biarkan kosong —
+## 🌐 Langkah 12 — Impor
+
+1. Pilih `eapex-kla` → **Import**.
+2. **Framework Preset**: **Other**.
+3. Build Command / Output Directory / Install Command: **biarkan kosong**.
    `vercel.json` di repo sudah mengatur semuanya.
-3. **Jangan klik Deploy dulu.** Buka **Environment Variables** lebih dahulu.
+4. **Jangan klik Deploy dulu.** Buka **Environment Variables** lebih dahulu.
 
-### 3.3 Isi Environment Variables
+## 🌐 Langkah 13 — Isi Environment Variables
 
-Semuanya untuk **Production, Preview, dan Development** (centang ketiganya).
+Centang ketiganya (**Production, Preview, Development**) untuk setiap baris.
 
-| Nama | Nilai | Dari mana |
+### Wajib
+
+| Nama | Nilai | Diambil dari |
 |---|---|---|
-| `SESSION_SECRET` | (acak 64 huruf) | `data/RAHASIA-DEPLOY.txt` |
-| `DATABASE_URL` | `postgresql://…:6543/postgres` | langkah 2.2 |
+| `SESSION_SECRET` | acak 64 huruf | `data\RAHASIA-DEPLOY.txt` |
+| `DATABASE_URL` | alamat Supabase | Langkah 2 |
 | `SIMPANAN` | `db` | ketik sendiri |
 | `DI_BELAKANG_PROXY` | `1` | ketik sendiri |
 | `ADMIN_EMAIL` | `admin@kla.co.id` | ketik sendiri |
-| `ADMIN_PASSWORD` | (acak 16 huruf) | `data/RAHASIA-DEPLOY.txt` |
-| `PENGINGAT_SECRET` | (acak 48 huruf) | `data/RAHASIA-DEPLOY.txt` |
+| `ADMIN_PASSWORD` | acak 16 huruf | `data\RAHASIA-DEPLOY.txt` |
+| `PENGINGAT_SECRET` | acak 48 huruf | `data\RAHASIA-DEPLOY.txt` |
 
-Tiga baris yang paling gampang terlewat, dan akibatnya:
+### Opsional — kuncinya sudah ada, tinggal salin
 
-- **`SIMPANAN=db`** — cakram Vercel dihapus setiap kali deploy. Tanpa ini,
+Notifikasi ke HP. Buka `.env` di folder aplikasi dengan Notepad, salin tiga
+nilai ini apa adanya:
+
+| Nama | Diambil dari |
+|---|---|
+| `VAPID_PUBLIC_KEY` | `.env` baris `VAPID_PUBLIC_KEY=` |
+| `VAPID_PRIVATE_KEY` | `.env` baris `VAPID_PRIVATE_KEY=` |
+| `VAPID_SUBJECT` | `.env` baris `VAPID_SUBJECT=` |
+
+Tanpa ini aplikasi tetap jalan penuh, hanya notifikasi HP-nya mati.
+
+### Tiga yang paling gampang terlewat
+
+- **`SIMPANAN=db`** — cakram Vercel dihapus **setiap kali deploy**. Tanpa ini,
   seluruh lampiran dokumen lama hilang begitu ada perbaikan kode, tanpa
   pemberitahuan apa pun.
-- **`DI_BELAKANG_PROXY=1`** — tanpa ini cookie sesi tidak ditandai `secure`.
-- **`ADMIN_PASSWORD`** — sandi 27 akun lain ditulis ke berkas di dalam server,
-  dan berkas itu ikut terhapus bersama cakramnya. Hanya admin yang bisa masuk
-  pertama kali; tanpa sandi ini Anda terkunci di luar sistem sendiri.
+- **`DI_BELAKANG_PROXY=1`** — tanpa ini cookie sesi tidak ditandai `secure`, dan
+  gejalanya orang login lalu langsung terlempar keluar.
+- **`ADMIN_PASSWORD`** — pengaman kalau basis data suatu saat dikosongkan. Untuk
+  login pertama nanti, yang berlaku adalah isi `data\AKUN-AWAL-SUPABASE.txt`.
 
-### 3.4 Deploy
+## 🌐 Langkah 14 — Deploy
 
-Klik **Deploy**, tunggu selesai. Catat alamat yang diberikan, misalnya
-`https://eapex-kla.vercel.app`.
+Klik **Deploy**. Tunggu sampai selesai (±1–2 menit). Catat alamat yang
+diberikan, misalnya `https://eapex-kla.vercel.app`.
 
-### 3.5 Satu env terakhir
+## 🌐 Langkah 15 — Satu env terakhir
 
-Settings → Environment Variables → tambah:
+1. Settings → Environment Variables → **Add**:
 
-| Nama | Nilai |
-|---|---|
-| `ALAMAT_APLIKASI` | alamat dari langkah 3.4 |
+   | Nama | Nilai |
+   |---|---|
+   | `ALAMAT_APLIKASI` | alamat dari Langkah 14 |
 
-Lalu Deployments → titik tiga pada deploy teratas → **Redeploy**.
+2. Deployments → titik tiga pada deploy teratas → **Redeploy**.
 
-Ini dipakai untuk tautan di dalam email dan notifikasi. Tanpa itu notifikasinya
+Dipakai untuk tautan di dalam email dan notifikasi. Tanpa itu notifikasinya
 tetap terkirim, hanya tanpa tombol menuju dokumennya.
 
-### 3.6 Pengingat harian
+> **Perubahan env tidak berlaku sampai di-Redeploy.** Ini berlaku untuk semua
+> perubahan env berikutnya juga.
 
-Sudah diatur di `vercel.json`: `0 3 * * *` UTC = **10.00 WIB**, sesuai
-permintaan. Cek di Settings → Cron Jobs bahwa `/api/pengingat` terdaftar.
+## 🌐 Langkah 16 — Periksa pengingat harian
+
+Settings → **Cron Jobs**. Harus terdaftar `/api/pengingat` dengan jadwal
+`0 3 * * *` — itu UTC, sama dengan **10.00 WIB** sesuai permintaan.
 
 Kalau `PENGINGAT_SECRET` kosong, alamat pemicunya **mati** — bukan terbuka untuk
 umum.
 
 ---
 
-## BAGIAN 4 — Sesudah hidup
+# BAGIAN 4 — Sesudah hidup (peramban saja)
 
-1. Buka alamatnya, masuk sebagai `admin@kla.co.id` dengan `ADMIN_PASSWORD`.
-   Sistem akan meminta ganti sandi.
-2. Admin → Pengguna → setel ulang sandi untuk 27 akun lain, bagikan ke orangnya.
-3. Isi **Email untuk notifikasi** tiap pengguna (tidak wajib, tapi tanpa itu
-   orangnya tidak dapat email).
-4. Admin → Matriks Approval → tentukan ambang ATK Rp 550.000 → CEO yang masih
-   menggantung.
-5. Buat satu dokumen uji sungguhan dari satu cabang, lewatkan sampai selesai.
-6. Hapus `data/RAHASIA-DEPLOY.txt` setelah semua nilainya terpasang di Vercel.
+## 🌐 Langkah 17 — Masuk pertama kali
 
-## Menyusul (belum perlu sekarang)
+Buka alamat aplikasinya. Masuk sebagai `admin@kla.co.id` dengan sandi admin dari
+`data\AKUN-AWAL-SUPABASE.txt`. Sistem akan meminta ganti sandi.
 
-- `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` — notifikasi email
-- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — notifikasi HP, buat dengan
-  `npm run kunci-push`
-- `OPENAI_API_KEY` — tombol "Baca penawaran ini". Sadari: begitu diisi, isi
+## 🌐 Langkah 18 — Bagikan sandi ke 27 orang lain
+
+Semuanya ada di `data\AKUN-AWAL-SUPABASE.txt`. Setiap orang akan diminta ganti
+sandi saat login pertama.
+
+## 🌐 Langkah 19 — Isi email notifikasi
+
+Admin → Pengguna → **Email untuk notifikasi** tiap orang. Tidak wajib, tapi yang
+kosong tidak akan menerima email.
+
+## 🌐 Langkah 20 — Putuskan ambang yang menggantung
+
+Admin → **Matriks Approval**. Yang masih perlu keputusan: ATK Rp 550.000 saat
+ini masih menuntut tanda tangan CEO di 15 cabang.
+
+## 🌐 Langkah 21 — Uji satu dokumen sungguhan
+
+Buat satu pengajuan dari satu cabang, lewatkan sampai selesai, pastikan
+notifikasinya sampai.
+
+## 💻 Langkah 22 — Hapus berkas rahasia
+
+Setelah semua nilainya terpasang di Vercel:
+
+```powershell
+Remove-Item data\RAHASIA-DEPLOY.txt
+```
+
+`data\AKUN-AWAL-SUPABASE.txt` **jangan dihapus** sampai semua 27 orang sudah
+menerima sandinya.
+
+---
+
+# Menyusul (belum perlu sekarang)
+
+- `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` —
+  notifikasi email. Gmail wajib pakai App Password, bukan sandi akun biasa.
+- `OPENAI_API_KEY` — tombol "Baca penawaran ini". **Sadari:** begitu diisi, isi
   berkas penawaran dikirim ke OpenAI. Harga vendor ikut keluar dari kantor.
 
-## Kalau ada yang meleset
+---
 
-| Gejala | Sebabnya biasanya |
-|---|---|
-| Push ditolak, "rejected / fetch first" | Repo GitHub tidak dibuat kosong (ada README) |
-| Push memakai akun yang salah | Nama akun tidak disisipkan di alamat remote (1.3) |
-| Repo `eapex-kla` tidak muncul di Vercel | Izin GitHub App belum diberikan ke akun baru (3.1) |
-| Halaman menggantung, tidak ada galat | `DATABASE_URL` pakai port 5432, bukan 6543 |
-| Lampiran dokumen lama hilang | `SIMPANAN` bukan `db` |
-| Masuk lalu langsung terlempar keluar | `DI_BELAKANG_PROXY` belum `1` |
-| Tidak bisa masuk sama sekali | `ADMIN_PASSWORD` belum diisi sebelum deploy pertama |
-| Pengingat tidak jalan | `PENGINGAT_SECRET` kosong |
+# Kalau ada yang meleset
 
-Perubahan env **tidak berlaku sampai di-Redeploy**.
+| Gejala | Sebabnya biasanya | Perbaikan |
+|---|---|---|
+| `Cannot find path` di PowerShell | Salah folder, atau berkasnya sudah dipindah | Ulangi Langkah 3 |
+| `password authentication failed` | `[YOUR-PASSWORD]` belum diganti, atau kurung sikunya ikut | Ulangi Langkah 2 no. 5 |
+| `getaddrinfo ENOTFOUND` | Alamat terpotong saat menempel | Salin ulang utuh |
+| `Basis data: sqlite` | Variabel belum terpasang | Ulangi Langkah 6 di jendela yang **sama** |
+| `npm run seed` menggantung lalu timeout | Port 5432, bukan 6543 | Ambil ulang Transaction pooler |
+| Repo tidak muncul di Vercel | Izin GitHub App belum diberikan | Langkah 11 no. 4 |
+| Halaman menggantung, tanpa galat | `DATABASE_URL` pakai port 5432 | Ganti ke 6543, lalu Redeploy |
+| Lampiran dokumen lama hilang | `SIMPANAN` bukan `db` | Betulkan, lalu Redeploy |
+| Login lalu langsung terlempar keluar | `DI_BELAKANG_PROXY` belum `1` | Betulkan, lalu Redeploy |
+| Pengingat tidak jalan | `PENGINGAT_SECRET` kosong | Isi, lalu Redeploy |
+| Notifikasi HP tidak muncul | VAPID belum diisi, atau alamat bukan https | Langkah 13 bagian opsional |
+
+Sandi Supabase yang mengandung `@ : / ? #` merusak struktur alamat sambungan.
+Paling cepat: Settings → Database → **Reset database password** → **Generate a
+password**.
