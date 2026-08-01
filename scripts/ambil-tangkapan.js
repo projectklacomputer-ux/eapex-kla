@@ -49,7 +49,7 @@ const HALAMAN = {
   'pilih-kategori': '/pengajuan/baru',
   'lampiran': '/pengajuan/baru/CAPEX',
   'form': '/pengajuan/baru/CAPEX',
-  'cuti': '/cuti',
+  'cuti': '/cuti-saya',
   'approval': '/approval',
   'ganti-sandi': '/ganti-sandi',
 };
@@ -253,6 +253,7 @@ async function isiContoh() {
   if (uji.status !== 200) throw new Error(`server contoh menjawab ${uji.status}, bukan 200`);
 
   let jumlah = 0;
+  let gagal = 0;
 
   // Halaman masuk: tidak perlu sesi sama sekali.
   await potret(chrome, `http://127.0.0.1:${PORT_APP}/login`, path.join(DIR, 'login.png'), 950);
@@ -269,14 +270,28 @@ async function isiContoh() {
     if (dokumen[akun.email]) daftar.detail = '/pengajuan/' + dokumen[akun.email];
 
     for (const [nama, jalur] of Object.entries(daftar)) {
-      const url = `http://127.0.0.1:${PORT_PROXY}` + (nama === 'form' || nama === 'lampiran' ? akun.formulir : jalur);
+      const alamat = (nama === 'form' || nama === 'lampiran') ? akun.formulir : jalur;
+      const url = `http://127.0.0.1:${PORT_PROXY}` + alamat;
       const keluar = path.join(DIR, `${track}-${nama}.png`);
       try {
+        // Halaman DIPERIKSA lebih dulu. Chrome memotret apa pun yang muncul,
+        // termasuk "Halaman tidak ditemukan" - dan hasilnya masuk ke PDF
+        // tutorial tanpa ada yang sadar. Persis itu yang terjadi pada layar
+        // Cuti Saya: alamatnya /cuti-saya, skrip ini memakai /cuti, dan PDF
+        // yang sudah dibagikan memuat halaman galat.
+        const uji = await ambil(`http://127.0.0.1:${PORT_PROXY}${alamat}`);
+        if (uji.status !== 200) {
+          throw new Error(`halaman ${alamat} menjawab ${uji.status}, bukan 200`);
+        }
+        if (/Halaman tidak ditemukan|Tidak berwenang|Terjadi kesalahan/.test(uji.teks)) {
+          throw new Error(`halaman ${alamat} berisi pesan galat, bukan isi sebenarnya`);
+        }
         await potret(chrome, url, keluar, nama === 'form' ? 1400 : 950);
         console.log(`  ${track}-${nama}.png`);
         jumlah++;
       } catch (e) {
-        console.log(`  GAGAL ${track}-${nama}.png - ${e.message.split('\n')[0]}`);
+        gagal++;
+        console.log(`  \x1b[31mGAGAL ${track}-${nama}.png — ${e.message.split('\n')[0]}\x1b[0m`);
       }
     }
     await new Promise(r => proxy.close(r));
@@ -292,7 +307,7 @@ async function isiContoh() {
   console.log(`\n  ${jumlah} gambar tersimpan di docs/tangkapan/`);
   console.log('  Basis data contoh sudah dihapus. Data asli tidak disentuh.\n');
   console.log('  Lanjut:  node scripts/buat-tutorial.js\n');
-  process.exit(0);
+  process.exit(gagal ? 1 : 0);
 })().catch(async e => {
   console.error('\n  Gagal:', e.message, '\n');
   try { await db.tutup(); } catch (_) { /* abaikan */ }

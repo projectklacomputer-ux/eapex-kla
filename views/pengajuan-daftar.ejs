@@ -33,6 +33,17 @@
         </select>
       </div>
       <div class="medan">
+        <%# Pembagian kasar: belanja modal vs biaya operasional. Gunanya satu
+            arah — memilih "Biaya" menampilkan 15 kategori sekaligus, yang
+            kalau lewat kotak Kategori harus dipilih satu per satu. %>
+        <label class="f">Jenis</label>
+        <select name="jenis">
+          <option value="">Semua jenis</option>
+          <option value="capex" <%= q.jenis === 'capex' ? 'selected' : '' %>>CAPEX / Aset</option>
+          <option value="biaya" <%= q.jenis === 'biaya' ? 'selected' : '' %>>Biaya</option>
+        </select>
+      </div>
+      <div class="medan">
         <label class="f">Bulan</label>
         <select name="bulan">
           <option value="">Semua bulan</option>
