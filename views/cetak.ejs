@@ -58,7 +58,7 @@
       <tr><td class="k">Kategori Aset</td><td class="d">:</td><td><%= d.kategori_aset || '-' %></td></tr>
       <tr><td class="k">Lokasi Penempatan</td><td class="d">:</td><td><%= d.lokasi || '-' %></td></tr>
       <tr><td class="k">Vendor / Supplier</td><td class="d">:</td><td><%= d.vendor || '-' %></td></tr>
-      <tr><td class="k">Jadwal Dibutuhkan</td><td class="d">:</td><td><%= bulanTahun(d.jadwal_kebutuhan) %></td></tr>
+      <tr><td class="k">Jadwal Dibutuhkan</td><td class="d">:</td><td><%= tanggalKegiatan(d.jadwal_kebutuhan) %></td></tr>
       <% if (d.referensi_disposal) { %>
         <tr><td class="k">Referensi Disposal Aset</td><td class="d">:</td><td><%= d.referensi_disposal %></td></tr>
       <% } %>
@@ -80,7 +80,7 @@
     <h3>B. Keterangan Biaya</h3>
     <table class="rinci">
       <tr><td class="k">Vendor / Penerima</td><td class="d">:</td><td><%= d.vendor || '-' %></td></tr>
-      <tr><td class="k">Periode</td><td class="d">:</td><td><%= bulanTahun(d.periode) %></td></tr>
+      <tr><td class="k">Periode</td><td class="d">:</td><td><%= tanggalKegiatan(d.periode) %></td></tr>
       <% if (d.penjelasan) { %><tr><td class="k">Penjelasan</td><td class="d">:</td><td><%= d.penjelasan %></td></tr><% } %>
     </table>
   <% } %>

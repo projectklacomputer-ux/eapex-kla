@@ -304,13 +304,13 @@ const ISIAN_LENGKAP = {
   capex: [['nama_proyek', 'Peremajaan perangkat'], ['tujuan[]', 'efisiensi'],
     ['kategori_aset', 'Inventaris'], ['deskripsi', 'AC 2 PK inverter, garansi resmi'],
     ['lokasi', 'Area kasir lantai 1'], ['vendor', 'PT Sumber Elektronik Jaya'],
-    ['jadwal_kebutuhan', '2026-08'],
+    ['jadwal_kebutuhan', '2026-08-15'],
     ['penjelasan', 'AC lama sudah tiga kali diservis dalam enam bulan.'],
     ['justifikasi', 'Biaya servis berulang lebih besar daripada mengganti unit.']],
   barang: [['jalur_pengadaan', 'Vendor langsung'], ['penjelasan', 'Perlengkapan habis pakai kasir.'],
     ['justifikasi', 'Stok lama habis dan dipakai harian.']],
   biaya: [['penjelasan', 'Biaya rutin bulanan.'], ['vendor', 'PT Media Karya'],
-    ['periode', '2026-08'], ['justifikasi', 'Sudah dianggarkan dan berjalan tiap bulan.']],
+    ['periode', '2026-08-15'], ['justifikasi', 'Sudah dianggarkan dan berjalan tiap bulan.']],
   perjalanan: [['tujuan_kota', 'Surabaya'], ['keperluan', 'Pendampingan buka cabang'],
     ['tgl_mulai', '2026-08-10'], ['tgl_selesai', '2026-08-12'], ['peserta', 'Store Manager Semarang'],
     ['moda', 'Kereta api'], ['justifikasi', 'Pembukaan cabang butuh pendampingan langsung.']],
@@ -1624,28 +1624,35 @@ async function cekAlur() {
         'kunci sesi tidak dipatok diam-diam di kode untuk produksi');
     }
 
-    // ---------------------------------------------------------------- kolom bulan
-    judul('D15. KOLOM "JADWAL DIBUTUHKAN" & "PERIODE" — KALENDER BULAN');
+    // ---------------------------------------------------------------- kolom tanggal
+    judul('D15. KOLOM "JADWAL DIBUTUHKAN" & "PERIODE" — KALENDER TANGGAL');
     {
-      const { bulanTahun } = require('../lib/util');
-      cek(bulanTahun('2026-08') === 'Agustus 2026',
-        'nilai kalender bulan diterjemahkan ke Bahasa Indonesia');
-      cek(bulanTahun('2026-01') === 'Januari 2026' && bulanTahun('2026-12') === 'Desember 2026',
+      const { tanggalKegiatan } = require('../lib/util');
+      cek(tanggalKegiatan('2026-08-15') === '15 Agustus 2026',
+        'nilai kalender tanggal diterjemahkan ke Bahasa Indonesia');
+      cek(tanggalKegiatan('2026-01-01') === '1 Januari 2026' && tanggalKegiatan('2026-12-31') === '31 Desember 2026',
         'ujung tahun (Januari & Desember) diterjemahkan benar');
-      cek(bulanTahun('Minggu kedua Agustus 2026') === 'Minggu kedua Agustus 2026',
+      cek(tanggalKegiatan('2026-08') === 'Agustus 2026',
+        'format bulan-saja (sempat berlaku singkat sebelum diperjelas jadi tanggal harian) tetap terbaca');
+      cek(tanggalKegiatan('Minggu kedua Agustus 2026') === 'Minggu kedua Agustus 2026',
         'data lama berformat bebas dikembalikan apa adanya, bukan dibuang — dokumen lama tetap terbaca');
-      cek(bulanTahun('') === '-' && bulanTahun(null) === '-' && bulanTahun(undefined) === '-',
+      cek(tanggalKegiatan('') === '-' && tanggalKegiatan(null) === '-' && tanggalKegiatan(undefined) === '-',
         'kosong ditampilkan sebagai "-"');
-      cek(bulanTahun('2026-13') === '2026-13' && bulanTahun('2026-00') === '2026-00',
+      cek(tanggalKegiatan('2026-13-01') === '2026-13-01',
         'bulan di luar 1-12 dikembalikan apa adanya, bukan menebak');
+      cek(tanggalKegiatan('2026-08-00') === '2026-08-00' && tanggalKegiatan('2026-02-30') === '2026-02-30',
+        'tanggal yang tidak ada di kalender (hari 0, atau 30 Februari) dikembalikan apa adanya — '
+        + 'bukan dibulatkan diam-diam ke tanggal lain seperti kebiasaan JS Date');
+      cek(tanggalKegiatan('2028-02-29') === '29 Februari 2028' && tanggalKegiatan('2026-02-29') === '2026-02-29',
+        '29 Februari diterima hanya pada tahun kabisat');
 
       const formForm = fs.readFileSync(P('views/pengajuan-form.ejs'), 'utf8');
-      cek(/type="month" name="jadwal_kebutuhan"/.test(formForm) && /type="month" name="periode"/.test(formForm),
-        'kedua kolom memakai kalender bulan, bukan lagi teks bebas');
+      cek(/type="date" name="jadwal_kebutuhan"/.test(formForm) && /type="date" name="periode"/.test(formForm),
+        'kedua kolom memakai kalender tanggal, bukan lagi teks bebas');
 
       const cssApp = fs.readFileSync(P('public/css/app.css'), 'utf8');
-      cek(/input\[type=month\]/.test(cssApp),
-        'kalender bulan ikut diberi gaya gelap — tanpa ini tampil putih polos, beda sendiri dari isian lain');
+      cek(/input\[type=date\]/.test(cssApp),
+        'kalender tanggal ikut diberi gaya gelap — tanpa ini tampil putih polos, beda sendiri dari isian lain');
     }
 
     // ---------------------------------------------------------------- kebersihan data

@@ -125,7 +125,7 @@ const kueHeader = () => [...toples].map(([k, v]) => `${k}=${v}`).join('; ');
 
   console.log('\n\x1b[1mDRAFT LENGKAP\x1b[0m\n');
   const b2 = await simpanDraft({ ...dasar, judul: 'Draft lengkap',
-    jadwal_kebutuhan: '2026-09', penjelasan: 'Uji', justifikasi: 'Uji' });
+    jadwal_kebutuhan: '2026-09-01', penjelasan: 'Uji', justifikasi: 'Uji' });
   cek('dinyatakan sudah lengkap', /sudah lengkap/.test(b2.halaman.teks));
   cek('tidak memberi peringatan palsu', !/BELUM BISA DIAJUKAN/.test(b2.halaman.teks));
 

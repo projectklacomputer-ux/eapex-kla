@@ -89,7 +89,7 @@ const SKENARIO = [
       ['tujuan[]', 'penggantian'], ['kategori_aset', 'Inventaris'],
       ['deskripsi', 'AC split 2 PK inverter, garansi kompresor 5 tahun'],
       ['lokasi', 'Area kasir lantai 1'], ['vendor', 'PT Sumber Elektronik Jaya'],
-      ['jadwal_kebutuhan', '2026-08'],
+      ['jadwal_kebutuhan', '2026-08-15'],
       ['penjelasan', 'AC lama sudah tiga kali diservis dalam enam bulan terakhir.'],
       ['justifikasi', 'Biaya servis berulang sudah melebihi harga unit baru.'],
       ['status_anggaran', 'budgeted'],
