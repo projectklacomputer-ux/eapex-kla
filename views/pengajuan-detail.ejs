@@ -155,7 +155,7 @@
             <dt>Kategori aset</dt><dd><%= d.kategori_aset || '-' %></dd>
             <dt>Lokasi</dt><dd><%= d.lokasi || '-' %></dd>
             <dt>Vendor</dt><dd><%= d.vendor || '-' %></dd>
-            <dt>Jadwal dibutuhkan</dt><dd><%= d.jadwal_kebutuhan || '-' %></dd>
+            <dt>Jadwal dibutuhkan</dt><dd><%= bulanTahun(d.jadwal_kebutuhan) %></dd>
             <% if (d.referensi_disposal) { %><dt>Referensi disposal</dt><dd><%= d.referensi_disposal %></dd><% } %>
             <% if (d.deskripsi) { %><dt>Spesifikasi</dt><dd style="white-space:pre-wrap"><%= d.deskripsi %></dd><% } %>
             <dt>Justifikasi</dt><dd style="white-space:pre-wrap"><%= d.justifikasi || '-' %></dd>
@@ -168,7 +168,7 @@
 
           <% if (bentuk === 'biaya') { %>
             <dt>Vendor / penerima</dt><dd><%= d.vendor || '-' %></dd>
-            <dt>Periode</dt><dd><%= d.periode || '-' %></dd>
+            <dt>Periode</dt><dd><%= bulanTahun(d.periode) %></dd>
             <dt>Penjelasan</dt><dd style="white-space:pre-wrap"><%= d.penjelasan || '-' %></dd>
           <% } %>
 

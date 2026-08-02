@@ -174,7 +174,7 @@ function buatKlien(dasar) {
     ['justifikasi', 'AC lama sering bocor.'],
     ['tujuan[]', 'efisiensi'], ['kategori_aset', 'Inventaris'],
     ['deskripsi', 'AC 2 PK inverter'], ['lokasi', 'Area kasir'], ['vendor', 'PT Sumber Elektronik'],
-    ['jadwal_kebutuhan', 'Agustus 2026'], ['penjelasan', 'AC lama sering bocor.'],
+    ['jadwal_kebutuhan', '2026-08'], ['penjelasan', 'AC lama sering bocor.'],
     ['item_nama', 'AC 2 PK'], ['item_qty', '2'], ['item_satuan', 'unit'], ['item_harga', '6.500.000'],
     ['aksi', 'ajukan'],
   ], [{ nama: 'Penawaran.pdf', mime: 'application/pdf', isi: '%PDF uji' }], t);

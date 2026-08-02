@@ -304,13 +304,13 @@ const ISIAN_LENGKAP = {
   capex: [['nama_proyek', 'Peremajaan perangkat'], ['tujuan[]', 'efisiensi'],
     ['kategori_aset', 'Inventaris'], ['deskripsi', 'AC 2 PK inverter, garansi resmi'],
     ['lokasi', 'Area kasir lantai 1'], ['vendor', 'PT Sumber Elektronik Jaya'],
-    ['jadwal_kebutuhan', 'Minggu kedua Agustus 2026'],
+    ['jadwal_kebutuhan', '2026-08'],
     ['penjelasan', 'AC lama sudah tiga kali diservis dalam enam bulan.'],
     ['justifikasi', 'Biaya servis berulang lebih besar daripada mengganti unit.']],
   barang: [['jalur_pengadaan', 'Vendor langsung'], ['penjelasan', 'Perlengkapan habis pakai kasir.'],
     ['justifikasi', 'Stok lama habis dan dipakai harian.']],
   biaya: [['penjelasan', 'Biaya rutin bulanan.'], ['vendor', 'PT Media Karya'],
-    ['periode', 'Agustus 2026'], ['justifikasi', 'Sudah dianggarkan dan berjalan tiap bulan.']],
+    ['periode', '2026-08'], ['justifikasi', 'Sudah dianggarkan dan berjalan tiap bulan.']],
   perjalanan: [['tujuan_kota', 'Surabaya'], ['keperluan', 'Pendampingan buka cabang'],
     ['tgl_mulai', '2026-08-10'], ['tgl_selesai', '2026-08-12'], ['peserta', 'Store Manager Semarang'],
     ['moda', 'Kereta api'], ['justifikasi', 'Pembukaan cabang butuh pendampingan langsung.']],
@@ -1622,6 +1622,30 @@ async function cekAlur() {
       cek(!/SESSION_SECRET\s*\|\|\s*['"][a-z0-9]{8,}/i.test(isiApp)
         || /NODE_ENV/.test(isiApp),
         'kunci sesi tidak dipatok diam-diam di kode untuk produksi');
+    }
+
+    // ---------------------------------------------------------------- kolom bulan
+    judul('D15. KOLOM "JADWAL DIBUTUHKAN" & "PERIODE" — KALENDER BULAN');
+    {
+      const { bulanTahun } = require('../lib/util');
+      cek(bulanTahun('2026-08') === 'Agustus 2026',
+        'nilai kalender bulan diterjemahkan ke Bahasa Indonesia');
+      cek(bulanTahun('2026-01') === 'Januari 2026' && bulanTahun('2026-12') === 'Desember 2026',
+        'ujung tahun (Januari & Desember) diterjemahkan benar');
+      cek(bulanTahun('Minggu kedua Agustus 2026') === 'Minggu kedua Agustus 2026',
+        'data lama berformat bebas dikembalikan apa adanya, bukan dibuang — dokumen lama tetap terbaca');
+      cek(bulanTahun('') === '-' && bulanTahun(null) === '-' && bulanTahun(undefined) === '-',
+        'kosong ditampilkan sebagai "-"');
+      cek(bulanTahun('2026-13') === '2026-13' && bulanTahun('2026-00') === '2026-00',
+        'bulan di luar 1-12 dikembalikan apa adanya, bukan menebak');
+
+      const formForm = fs.readFileSync(P('views/pengajuan-form.ejs'), 'utf8');
+      cek(/type="month" name="jadwal_kebutuhan"/.test(formForm) && /type="month" name="periode"/.test(formForm),
+        'kedua kolom memakai kalender bulan, bukan lagi teks bebas');
+
+      const cssApp = fs.readFileSync(P('public/css/app.css'), 'utf8');
+      cek(/input\[type=month\]/.test(cssApp),
+        'kalender bulan ikut diberi gaya gelap — tanpa ini tampil putih polos, beda sendiri dari isian lain');
     }
 
     // ---------------------------------------------------------------- kebersihan data

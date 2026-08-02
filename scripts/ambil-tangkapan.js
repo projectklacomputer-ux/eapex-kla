@@ -194,7 +194,7 @@ async function isiContoh() {
         nama_proyek: c.judul, tujuan: ['penggantian', 'efisiensi'],
         kategori_aset: 'Inventaris', deskripsi: c.item.nama,
         lokasi: 'Ruang contoh', vendor: 'PT Vendor Contoh',
-        jadwal_kebutuhan: 'Bulan depan', jalur_pengadaan: 'Pembelian langsung',
+        jadwal_kebutuhan: '2026-09', jalur_pengadaan: 'Pembelian langsung',
         periode: 'Bulan berjalan',
         penjelasan: 'Isi ini hanya contoh untuk keperluan panduan pemakaian.',
         justifikasi: 'Isi ini hanya contoh untuk keperluan panduan pemakaian.',

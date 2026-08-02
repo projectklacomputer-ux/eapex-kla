@@ -269,7 +269,7 @@ label.f {
 }
 label.f .wajib { color: var(--merah); }
 input[type=text], input[type=email], input[type=password], input[type=number], input[type=date],
-input[type=file], select, textarea {
+input[type=month], input[type=file], select, textarea {
   width: 100%; padding: 9px 12px; border: 1px solid var(--garis-terang);
   border-radius: var(--lengkung-kecil); font-size: 13.5px; font-family: inherit;
   color: var(--teks); background: rgba(255, 255, 255, .05);
@@ -306,8 +306,9 @@ input:-internal-autofill-previewed {
   background-image: none !important;
   color: var(--teks) !important;
 }
-/* Ikon kalender pada isian tanggal berwarna gelap; dibalik agar terlihat. */
-input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.75); cursor: pointer; }
+/* Ikon kalender pada isian tanggal/bulan berwarna gelap; dibalik agar terlihat. */
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=month]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.75); cursor: pointer; }
 select option { background: var(--ungu-800); color: var(--teks); }
 textarea { min-height: 84px; resize: vertical; }
 input[type=checkbox], input[type=radio] { accent-color: var(--ungu-terang); }

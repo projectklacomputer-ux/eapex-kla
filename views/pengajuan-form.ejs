@@ -237,9 +237,25 @@
             </div>
             <div class="medan">
               <label class="f">Jadwal dibutuhkan</label>
-              <input type="text" name="jadwal_kebutuhan" value="<%= data.jadwal_kebutuhan || '' %>" maxlength="300"
-                placeholder="mis. September 2026" data-medan="Jadwal dibutuhkan"
-                data-bantu="Kapan aset harus siap dipakai — dasar Purchasing menyusun urutan pembelian.">
+              <%
+                // Dikunci ke bulan lewat kalender (bukan lagi teks bebas) supaya
+                // tidak ada lagi isian yang tidak jelas maksudnya. Data lama yang
+                // formatnya bebas (mis. "Minggu kedua Agustus 2026") tidak cocok
+                // dengan pola input bulan browser — kalau dipaksakan, browser
+                // mengosongkan tampilannya walau nilainya masih tersimpan di server.
+                // Jadi dokumen lama seperti itu ditampilkan sebagai teks biasa,
+                // bukan dipaksa masuk kalender.
+                var jadwalBulan = /^\d{4}-\d{2}$/.test(data.jadwal_kebutuhan || '');
+              %>
+              <% if (jadwalBulan || !data.jadwal_kebutuhan) { %>
+                <input type="month" name="jadwal_kebutuhan" value="<%= data.jadwal_kebutuhan || '' %>"
+                  data-medan="Jadwal dibutuhkan"
+                  data-bantu="Kapan aset harus siap dipakai — dasar Purchasing menyusun urutan pembelian.">
+              <% } else { %>
+                <input type="text" name="jadwal_kebutuhan" value="<%= data.jadwal_kebutuhan %>" maxlength="300"
+                  data-medan="Jadwal dibutuhkan"
+                  data-bantu="Diisi sebelum kolom ini memakai kalender bulan. Kosongkan lalu simpan untuk beralih ke kalender.">
+              <% } %>
             </div>
           </div>
           <div class="kisi k2">
@@ -295,9 +311,15 @@
             </div>
             <div class="medan">
               <label class="f">Periode / tanggal kegiatan</label>
-              <input type="text" name="periode" value="<%= data.periode || '' %>" maxlength="300"
-                placeholder="mis. Agustus 2026" data-medan="Periode"
-                data-bantu="Kapan biaya ini terjadi atau untuk periode apa.">
+              <% var periodeBulan = /^\d{4}-\d{2}$/.test(data.periode || ''); %>
+              <% if (periodeBulan || !data.periode) { %>
+                <input type="month" name="periode" value="<%= data.periode || '' %>"
+                  data-medan="Periode" data-bantu="Kapan biaya ini terjadi atau untuk periode apa.">
+              <% } else { %>
+                <input type="text" name="periode" value="<%= data.periode %>" maxlength="300"
+                  data-medan="Periode"
+                  data-bantu="Diisi sebelum kolom ini memakai kalender bulan. Kosongkan lalu simpan untuk beralih ke kalender.">
+              <% } %>
             </div>
           </div>
           <div class="medan">

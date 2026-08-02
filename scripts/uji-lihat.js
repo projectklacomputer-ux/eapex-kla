@@ -47,7 +47,7 @@ async function buatDokumen(pemohon, kodeKategori, judul) {
   const pid = id();
   const waktu = new Date().toISOString();
   const data = { nama_proyek: judul, tujuan: ['efisiensi'], kategori_aset: 'Inventaris',
-    deskripsi: judul, lokasi: 'Uji', vendor: 'Uji', jadwal_kebutuhan: 'Bulan depan',
+    deskripsi: judul, lokasi: 'Uji', vendor: 'Uji', jadwal_kebutuhan: '2026-09',
     jalur_pengadaan: 'Pembelian langsung', periode: 'Bulan ini',
     penjelasan: 'Uji', justifikasi: 'Uji' };
   await db.run(

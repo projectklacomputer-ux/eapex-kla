@@ -149,6 +149,7 @@ app.use((req, res, next) => {
   res.locals.tglIndo = util.tglIndo;
   res.locals.tglSingkat = util.tglSingkat;
   res.locals.jamIndo = util.jamIndo;
+  res.locals.bulanTahun = util.bulanTahun;
   res.locals.selisihHari = util.selisihHari;
   res.locals.terbilangRupiah = util.terbilangRupiah;
   res.locals.terbilangAngkaKecil = util.terbilangAngka;
