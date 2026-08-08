@@ -499,10 +499,18 @@ table.item td.aksi { width: 38px; text-align: center; }
 .lembar .ttd-sel .kotak-ttd { height: 74px; border-bottom: 1px solid #000; margin-bottom: 4px; display: grid; place-items: center; }
 .lembar .ttd-sel .kotak-ttd img { max-height: 70px; max-width: 100%; }
 .lembar .ttd-sel .cap { font-size: 10px; color: #555; }
+/* Dipisah dari style sebaris supaya versi cetak bisa mengecilkannya lewat
+   @media print di bawah — style sebaris tidak bisa dikalahkan CSS eksternal. */
+.lembar .kotak-ttd-disetujui { font-size: 10px; color: #0a6b4c; line-height: 1.35; }
 .lembar .klausul { padding-left: 20px; margin: 0; }
 .lembar .klausul li { margin-bottom: 6px; text-align: justify; }
 .lembar .kaki-dok { margin-top: 20px; font-size: 10px; color: #555; border-top: 1px solid #ccc; padding-top: 7px; }
 .bilah-cetak { max-width: 820px; margin: 14px auto 0; display: flex; gap: 9px; }
+
+/* @page TERPISAH dari @media print (bukan disarangkan): letak ini kompatibel
+   di lebih banyak mesin render PDF/cetak. Margin bawaan Chrome ~19mm tiap
+   sisi — pemborosan terbesar pada dokumen satu halaman seperti ini. */
+@page { size: A4; margin: 7mm 10mm; }
 
 @media print {
   .samping, .atas, .bilah-cetak, .tanpa-cetak { display: none !important; }
@@ -513,6 +521,28 @@ table.item td.aksi { width: 38px; text-align: center; }
   .lembar h3, table.kotak th { background: #eef0f3 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   a { color: #000; text-decoration: none; }
   .putus-halaman { page-break-before: always; }
+
+  /* Dipadatkan supaya satu dokumen wajar muat SATU halaman A4. Semua di
+     bawah ini HANYA berlaku saat benar-benar dicetak — pratinjau di layar
+     sebelum menekan "Cetak / Simpan PDF" tidak berubah sama sekali. */
+  body, .lembar { font-size: 9.5px; }
+  .lembar .kop { padding-bottom: 3px; margin-bottom: 5px; }
+  .lembar h1 { margin: 3px 0 1px; font-size: 12px; }
+  .lembar .nomor-dok { margin-bottom: 5px; }
+  .lembar h3 { margin: 5px 0 2px; padding: 2px 6px; font-size: 10px; }
+  .lembar table { font-size: 9.5px; }
+  .lembar table.kotak th, .lembar table.kotak td { padding: 1.5px 4px; }
+  .lembar table.rinci td { padding: 0.5px 0; }
+  .lembar table.rinci td.k { width: 150px; }
+  .lembar .ttd-baris { margin-top: 3px; page-break-inside: avoid; }
+  .lembar .ttd-sel { page-break-inside: avoid; }
+  .lembar .ttd-sel .kotak-ttd { height: 20px; margin-bottom: 1px; }
+  /* Kotak "DISETUJUI SECARA ELEKTRONIK" memuat 2 baris teks — kalau ikut
+     dipangkas ke tinggi kotak kosong di atas, teksnya meluber ke luar kotak
+     dan bertabrakan dengan kolom sebelahnya. Diberi tinggi sendiri dan
+     fontnya dikecilkan supaya pas. */
+  .lembar .ttd-sel .kotak-ttd-disetujui { height: 26px; font-size: 6.5px; line-height: 1.25; }
+  .lembar .kaki-dok { margin-top: 3px; padding-top: 1.5px; font-size: 7.5px; page-break-inside: avoid; }
 }
 
 /* ------------------------------------------------------------ layar kecil */

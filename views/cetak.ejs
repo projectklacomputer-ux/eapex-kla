@@ -221,7 +221,7 @@
     </div>
     <% p.persetujuan.filter(function (s) { return s.status === 'disetujui'; }).forEach(function (s) { %>
       <div class="ttd-sel">
-        <div class="kotak-ttd" style="font-size:10px; color:#0a6b4c">
+        <div class="kotak-ttd kotak-ttd-disetujui">
           <div>DISETUJUI SECARA ELEKTRONIK<br><%= tglIndo(s.waktu, true) %></div>
         </div>
         <b><%= s.aktor_nama %></b>
