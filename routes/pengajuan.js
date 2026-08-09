@@ -192,6 +192,10 @@ r.get('/:id', async (req, res) => {
     // siapa yang berikutnya, apakah tahapnya boleh dilewati, dan apakah orangnya
     // memang sedang tercatat berhalangan.
     tahapBerikut: await P.tahapBerikutnya(p),
+    // Rantai approval ULANG realisasi (lib/alur.js ajukanRealisasi) — tabel
+    // terpisah dari rantai uang muka yang asli.
+    bolehPutusRealisasi: P.bolehMemutuskanRealisasi(p, req.pengguna),
+    langkahAktifRealisasi: P.langkahAktifRealisasi(p),
     maksMB,
   });
 });
@@ -242,6 +246,10 @@ async function simpan(req, res, pLama) {
   const master = await masterFormulir(req.pengguna, aturan.wilayah);
   const data = form.bacaData(kategori.bentuk, b);
   const items = form.bacaItems(b);
+  // Uang muka -> penyelesaian: pilihan pemohon, hanya berlaku untuk bentuk
+  // 'perjalanan'. Bukan bagian data_json karena dipakai LOGIKA alur (lib/alur.js),
+  // bukan sekadar tampilan.
+  const perluRealisasi = kategori.bentuk === 'perjalanan' && b.perlu_realisasi === '1' ? 1 : 0;
 
   // Cabang/departemen wajib berasal dari daftar yang memang boleh dipakai pengguna ini,
   // supaya kiriman yang dimodifikasi tidak bisa menembus batas unit.
@@ -294,19 +302,20 @@ async function simpan(req, res, pLama) {
     if (pLama) {
       await ops.run(
         `UPDATE pengajuan SET kategori_id = ?, aturan_id = ?, wilayah = ?, cabang_id = ?, departemen_id = ?,
-         judul = ?, keterangan = ?, status_anggaran = ?, total = ?, data_json = ?, diperbarui = ? WHERE id = ?`,
+         judul = ?, keterangan = ?, status_anggaran = ?, total = ?, data_json = ?, perlu_realisasi = ?,
+         diperbarui = ? WHERE id = ?`,
         [kategori.id, aturan.id, aturan.wilayah, cabang_id, departemen_id, judul,
           String(b.keterangan || '').slice(0, 4000) || null, bersih(b.status_anggaran) || null,
-          total, JSON.stringify(data), waktu, pengajuanId]);
+          total, JSON.stringify(data), perluRealisasi, waktu, pengajuanId]);
       await ops.run('DELETE FROM pengajuan_item WHERE pengajuan_id = ?', [pengajuanId]);
     } else {
       await ops.run(
         `INSERT INTO pengajuan (id, nomor, kategori_id, aturan_id, wilayah, pemohon_id, cabang_id, departemen_id,
-         judul, keterangan, status_anggaran, total, status, langkah_kini, data_json, dibuat, diperbarui)
-         VALUES (?,NULL,?,?,?,?,?,?,?,?,?,?, 'draft', 0, ?, ?, ?)`,
+         judul, keterangan, status_anggaran, total, status, langkah_kini, data_json, perlu_realisasi, dibuat, diperbarui)
+         VALUES (?,NULL,?,?,?,?,?,?,?,?,?,?, 'draft', 0, ?, ?, ?, ?)`,
         [pengajuanId, kategori.id, aturan.id, aturan.wilayah, req.pengguna.id, cabang_id, departemen_id,
           judul, String(b.keterangan || '').slice(0, 4000) || null, bersih(b.status_anggaran) || null,
-          total, JSON.stringify(data), waktu, waktu]);
+          total, JSON.stringify(data), perluRealisasi, waktu, waktu]);
     }
     for (const it of items) {
       await ops.run(
@@ -477,6 +486,47 @@ r.post('/:id/lampiran/:lid/hapus', async (req, res, next) => {
       pengajuan_id: p.id, pengguna: req.pengguna, aksi: 'hapus-lampiran', ip: req.ip, detail: l.nama_asli,
     });
     res.kilat('sukses', 'Lampiran dihapus.');
+  } catch (e) {
+    if (!e.publik) return next(e);
+    res.kilat('galat', e.message);
+  }
+  res.redirect('/pengajuan/' + req.params.id);
+});
+
+// --------------------------------------------------------------- realisasi (uang muka perjalanan dinas)
+// SATU dokumen, SATU nomor, dari pengajuan uang muka sampai penyelesaian —
+// bukan dua dokumen yang saling merujuk (lihat lib/skema.js untuk kolomnya).
+// Sesudah rantai approval uang muka selesai (lib/alur.js), pemohon mengisi
+// realisasi di sini — yang lalu memicu RANTAI APPROVAL ULANG (Area Manager ->
+// Regional Manager -> Accounting -> CEO, persis seperti uang mukanya) lewat
+// alur.ajukanRealisasi/putuskanRealisasi. Bukan sekadar verifikasi Accounting.
+r.post('/:id/realisasi', terimaBerkas('berkas', 5), async (req, res, next) => {
+  const b = req.body || {};
+  try {
+    const nominal = keRupiahBulat(b.realisasi_nominal);
+    const tanggal = bersih(b.realisasi_tanggal);
+    const keterangan = String(b.realisasi_keterangan || '').trim().slice(0, 2000);
+    // Validasi & insert lampiran ada DI DALAM alur.ajukanRealisasi (satu transaksi),
+    // supaya berkas yang terunggah tidak pernah tersimpan sendirian saat
+    // pemeriksaan lain (wewenang, nominal, rantai approval) gagal.
+    req.berkasDipakai = true;
+    await alur.ajukanRealisasi(req.params.id, req.pengguna,
+      { nominal, tanggal, keterangan, berkas: req.files || [] }, req.ip);
+    res.kilat('sukses', 'Realisasi berhasil diajukan, menunggu approval ulang (sama seperti alur uang mukanya).');
+  } catch (e) {
+    if (!e.publik) return next(e);
+    res.kilat('galat', e.message);
+  }
+  res.redirect('/pengajuan/' + req.params.id);
+});
+
+r.post('/:id/putuskan-realisasi', async (req, res, next) => {
+  const b = req.body || {};
+  try {
+    const hasil = await alur.putuskanRealisasi(req.params.id, req.pengguna, b.aksi, b.komentar, req.ip);
+    res.kilat('sukses', hasil.status === 'setuju'
+      ? (hasil.berikut ? 'Disetujui. Diteruskan ke ' + hasil.berikut.label + '.' : 'Realisasi disetujui seluruh tahap — selesai.')
+      : 'Realisasi dikembalikan ke pemohon untuk revisi.');
   } catch (e) {
     if (!e.publik) return next(e);
     res.kilat('galat', e.message);

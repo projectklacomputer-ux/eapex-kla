@@ -1,5 +1,43 @@
 <%- include('partials/atas') %>
 
+<% if (inboxRealisasi.length) { %>
+  <div class="kartu" style="border-color:var(--emas)">
+    <div class="kepala"><h2>Realisasi Menunggu Keputusan Anda <span class="lencana kuning"><%= inboxRealisasi.length %></span></h2></div>
+    <div class="badan rapat">
+      <div class="gulir">
+        <table class="data">
+          <thead>
+            <tr><th>Nomor</th><th>Perihal</th><th>Pemohon</th><th class="angka">Uang Muka</th>
+                <th class="angka">Realisasi</th><th>Tahap</th><th>Diajukan</th><th>Keputusan cepat</th></tr>
+          </thead>
+          <tbody>
+          <% inboxRealisasi.forEach(function (b) { %>
+            <tr>
+              <td class="nowrap"><a href="/pengajuan/<%= b.id %>"><%= b.nomor %></a></td>
+              <td><a href="/pengajuan/<%= b.id %>"><%= b.judul %></a></td>
+              <td><%= b.pemohon_nama %></td>
+              <td class="angka"><%= rp(b.total) %></td>
+              <td class="angka tebal"><%= rp(b.realisasi && b.realisasi.nominal) %></td>
+              <td><span class="lencana biru"><%= b.langkah_label %></span></td>
+              <td class="nowrap"><%= tglIndo(b.realisasi_diajukan, true) %></td>
+              <td>
+                <form method="post" action="/pengajuan/<%= b.id %>/putuskan-realisasi" class="baris-tombol">
+                  <input type="hidden" name="_csrf" value="<%= csrf %>">
+                  <input type="hidden" name="aksi" value="setuju">
+                  <button class="tombol kecil hijau" type="submit" data-aksi="konfirmasi"
+                    data-pesan="Setujui realisasi <%= b.nomor %> sebesar <%= rp(b.realisasi && b.realisasi.nominal) %>?">Setujui</button>
+                  <a class="tombol kecil" href="/pengajuan/<%= b.id %>">Periksa dulu</a>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<% } %>
+
 <div class="kartu">
   <div class="kepala"><h2>Menunggu Keputusan Anda <span class="lencana kuning"><%= inbox.length %></span></h2></div>
   <div class="badan rapat">

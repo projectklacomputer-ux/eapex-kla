@@ -332,6 +332,22 @@
 
       <% if (bentuk === 'perjalanan') { %>
         <div class="bagian"><h3><span class="bulat-bagian"><%= bagianBerikut() %></span>Rincian Perjalanan</h3>
+          <% var perluRealisasiDipilih = p && p.perlu_realisasi ? true : false; %>
+          <div class="medan">
+            <label class="f">Jenis pengajuan</label>
+            <label class="centang">
+              <input type="radio" name="perlu_realisasi" value="0" <%= !perluRealisasiDipilih ? 'checked' : '' %>>
+              <b>Langsung final</b> — nominal sudah pasti, tidak perlu penyelesaian susulan
+            </label>
+            <label class="centang">
+              <input type="radio" name="perlu_realisasi" value="1" <%= perluRealisasiDipilih ? 'checked' : '' %>>
+              <b>Minta uang muka dulu</b> — nominal di sini perkiraan, diselesaikan (diisi realisasi) setelah perjalanan
+            </label>
+            <div class="petunjuk">
+              Kalau memilih uang muka: sesudah disetujui seluruh tahap, tombol "Selesaikan Perjalanan Dinas" akan
+              muncul di halaman dokumen ini untuk mengisi nominal sebenarnya beserta bukti/kwitansi.
+            </div>
+          </div>
           <div class="kisi k4">
             <div class="medan">
               <label class="f">Kota / lokasi tujuan</label>

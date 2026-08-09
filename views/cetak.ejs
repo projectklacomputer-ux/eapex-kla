@@ -94,6 +94,50 @@
       <tr><td class="k">Peserta</td><td class="d">:</td><td><%= d.peserta || '-' %></td></tr>
       <tr><td class="k">Keperluan</td><td class="d">:</td><td><%= d.keperluan || '-' %></td></tr>
     </table>
+    <% if (p.perlu_realisasi) { %>
+      <h3>B2. Uang Muka &amp; Realisasi</h3>
+      <table class="rinci">
+        <tr><td class="k">Status Realisasi</td><td class="d">:</td><td><b><%=
+          p.status_realisasi === 'selesai' ? 'REALISASI DISETUJUI PENUH'
+          : p.status_realisasi === 'diajukan' ? 'REALISASI SEDANG APPROVAL ULANG'
+          : p.status_realisasi === 'revisi' ? 'REALISASI PERLU REVISI PEMOHON'
+          : 'MENUNGGU PENYELESAIAN'
+        %></b></td></tr>
+        <tr><td class="k">Uang Muka Disetujui</td><td class="d">:</td><td><%= rp(p.total) %></td></tr>
+        <% if (p.realisasi) { %>
+          <tr><td class="k">Realisasi</td><td class="d">:</td><td><%= rp(p.realisasi.nominal) %></td></tr>
+          <tr><td class="k">Tanggal Realisasi</td><td class="d">:</td><td><%= tglIndo(p.realisasi.tanggal) %></td></tr>
+          <% if (p.status_realisasi === 'selesai') { %>
+            <% var selisihCetak = Number(p.total || 0) - Number(p.realisasi.nominal || 0); %>
+            <tr><td class="k">Selisih</td><td class="d">:</td><td>
+              <%= rp(Math.abs(selisihCetak)) %> —
+              <%= selisihCetak > 0 ? 'kelebihan uang muka' : (selisihCetak < 0 ? 'kekurangan uang muka' : 'pas, tidak ada selisih') %>
+              (info saja, penyelesaian dana di luar sistem)
+            </td></tr>
+            <tr><td class="k">Disetujui Akhir Oleh</td><td class="d">:</td>
+              <td><%= p.realisasi_verif_nama || '-' %>, <%= tglIndo(p.realisasi_selesai, true) %></td></tr>
+          <% } %>
+        <% } %>
+      </table>
+      <% if ((p.persetujuan_realisasi || []).length) { %>
+        <table class="kotak" style="margin-top:4px">
+          <thead>
+            <tr><th style="width:26px">No</th><th>Nama</th><th>Jabatan / Tahap</th><th style="width:88px">Status</th><th style="width:130px">Tanggal</th></tr>
+          </thead>
+          <tbody>
+            <% p.persetujuan_realisasi.forEach(function (s) { %>
+              <tr>
+                <td><%= s.urut %></td>
+                <td><%= s.aktor_nama || ((s.kandidat || []).map(function (k) { return k.nama; }).join(' / ') || '-') %></td>
+                <td><%= s.aktor_jabatan || s.label %></td>
+                <td><%= s.status === 'disetujui' ? 'DISETUJUI' : (s.status === 'revisi' ? 'REVISI' : (s.status === 'dilewati' ? 'DILEWATI' : 'MENUNGGU')) %></td>
+                <td><%= s.waktu ? tglIndo(s.waktu, true) : '-' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    <% } %>
   <% } %>
 
   <% if (bentuk === 'maintenance') { %>

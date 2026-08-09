@@ -32,7 +32,13 @@ r.get('/approval', async (req, res) => {
      JOIN pengajuan p ON p.id = s.pengajuan_id
      JOIN kategori k ON k.id = p.kategori_id
      WHERE s.aktor_id = ? ORDER BY s.waktu DESC LIMIT 50`, [req.pengguna.id]);
-  res.render('approval', { judul: 'Kotak Approval', menuAktif: 'approval', inbox, riwayat });
+  // Realisasi (pertanggungjawaban uang muka) yang menunggu keputusan pengguna
+  // ini pada rantai approval ULANG — tabel terpisah dari kotak masuk biasa
+  // (lihat lib/pengajuan.js kotakMasukRealisasi & lib/alur.js ajukanRealisasi).
+  const inboxRealisasi = await P.kotakMasukRealisasi(req.pengguna.id);
+  res.render('approval', {
+    judul: 'Kotak Approval', menuAktif: 'approval', inbox, riwayat, inboxRealisasi,
+  });
 });
 
 // --------------------------------------------------------------- cuti sendiri

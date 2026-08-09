@@ -794,6 +794,167 @@ async function cekAlur() {
       { peran: 'ceo', lingkup: 'auto' }, { pemohon_id: amBaratUser.id, cabang_id: smgJtg.id, area_id: areaBarat.id });
     cek(calonCeo.length === 1, 'peran kantor pusat (CEO) tetap ketemu dari unit mana pun');
 
+    // ---------------------------------------------------------------- uang muka -> realisasi (dinas)
+    // SATU dokumen, SATU nomor dari pengajuan uang muka sampai penyelesaian. Sesudah
+    // uang muka disetujui, pemohon mengisi realisasi lalu rantai approval yang SAMA
+    // (area_manager -> regional_manager -> accounting -> ceo) DIULANG dari awal,
+    // disimpan di persetujuan_realisasi — TERPISAH dari rantai uang muka asli.
+    judul('D6B. UANG MUKA -> REALISASI PERJALANAN DINAS (APPROVAL ULANG)');
+    const Pj2 = require('../lib/pengajuan');
+    const tDinasUm = await sm.csrf('/pengajuan/baru/DINAS');
+    await sm.postBerkas('/pengajuan', lengkapi('perjalanan', [
+      ['kategori_id', katDinas.id], ['aturan_id', aturDinasSm.id], ['cabang_id', smgJtg.id],
+      ['judul', 'Dinas uang muka ke Yogyakarta'], ['tujuan_kota', 'Yogyakarta'], ['keperluan', 'kunjungan vendor'],
+      ['item_nama', 'Transport & penginapan'], ['item_qty', '1'], ['item_satuan', 'paket'], ['item_harga', '3.000.000'],
+      ['perlu_realisasi', '1'],
+      ['aksi', 'ajukan'],
+    ]), BERKAS_UJI, tDinasUm);
+    const dinasUm = await db.get(
+      "SELECT * FROM pengajuan WHERE judul = 'Dinas uang muka ke Yogyakarta' ORDER BY dibuat DESC LIMIT 1");
+    cek(!!dinasUm && Number(dinasUm.perlu_realisasi) === 1,
+      'perlu_realisasi tersimpan 1 saat memilih "minta uang muka dulu"');
+    cek(dinasUm.status_realisasi === null, 'status_realisasi masih kosong sebelum rantai approval selesai');
+
+    const tAmUm = await amBarat.csrf('/pengajuan/' + dinasUm.id);
+    await amBarat.post('/pengajuan/' + dinasUm.id + '/putuskan', [['aksi', 'setuju']], tAmUm);
+    const rmUji = new Klien(dasar);
+    await rmUji.masuk('regional@kla.co.id', SANDI);
+    const tRmUm = await rmUji.csrf('/pengajuan/' + dinasUm.id);
+    await rmUji.post('/pengajuan/' + dinasUm.id + '/putuskan', [['aksi', 'setuju']], tRmUm);
+    const tAccUm = await acc.csrf('/pengajuan/' + dinasUm.id);
+    await acc.post('/pengajuan/' + dinasUm.id + '/putuskan', [['aksi', 'setuju']], tAccUm);
+    const ceoUji = new Klien(dasar);
+    await ceoUji.masuk('ceo@kla.co.id', SANDI);
+    const tCeoUm = await ceoUji.csrf('/pengajuan/' + dinasUm.id);
+    await ceoUji.post('/pengajuan/' + dinasUm.id + '/putuskan', [['aksi', 'setuju']], tCeoUm);
+
+    const dinasUmDisetujui = await db.get('SELECT * FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmDisetujui.status === 'disetujui', 'dokumen disetujui penuh seluruh tahap uang muka');
+    cek(dinasUmDisetujui.status_realisasi === 'menunggu',
+      'status_realisasi otomatis jadi "menunggu" begitu uang muka disetujui penuh');
+    const kabarSelesaikan = await db.all(
+      "SELECT * FROM notifikasi WHERE pengajuan_id = ? AND judul LIKE '%selesaikan uang muka%'", [dinasUm.id]);
+    cek(kabarSelesaikan.length > 0, 'pemohon diberi tahu untuk menyelesaikan uang muka setelah disetujui penuh');
+
+    // bukan pemohon tidak boleh mengisi realisasi
+    const tGagalRealisasi = await amBarat.csrf('/pengajuan/' + dinasUm.id);
+    const rGagalRealisasi = await amBarat.post('/pengajuan/' + dinasUm.id + '/realisasi',
+      [['realisasi_nominal', '2.800.000'], ['realisasi_tanggal', '2026-08-20']], tGagalRealisasi);
+    cek(rGagalRealisasi.status === 303, 'bukan pemohon ditolak mengisi realisasi');
+    const dinasUmSetelahGagal = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmSetelahGagal.status_realisasi === 'menunggu', 'status_realisasi tidak berubah oleh percobaan orang lain');
+
+    // realisasi tanpa bukti/kwitansi ditolak
+    const tTanpaBukti = await sm.csrf('/pengajuan/' + dinasUm.id);
+    await sm.post('/pengajuan/' + dinasUm.id + '/realisasi',
+      [['realisasi_nominal', '2.800.000'], ['realisasi_tanggal', '2026-08-20']], tTanpaBukti);
+    const dinasUmTanpaBukti = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmTanpaBukti.status_realisasi === 'menunggu', 'realisasi tanpa bukti/kwitansi ditolak (status tidak berubah)');
+
+    // realisasi lengkap dengan bukti -> memicu rantai approval ULANG, sama seperti uang muka
+    const tRealisasi = await sm.csrf('/pengajuan/' + dinasUm.id);
+    await sm.postBerkas('/pengajuan/' + dinasUm.id + '/realisasi',
+      [['realisasi_nominal', '2.750.000'], ['realisasi_tanggal', '2026-08-20'],
+        ['realisasi_keterangan', 'Hemat transport']],
+      [{ nama: 'Kwitansi-Yogyakarta.pdf', mime: 'application/pdf', isi: '%PDF-1.4 kwitansi uji' }], tRealisasi);
+    const dinasUmDiajukan = await db.get('SELECT * FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmDiajukan.status_realisasi === 'diajukan', 'realisasi dengan bukti berhasil diajukan');
+    const realisasiJson = JSON.parse(dinasUmDiajukan.realisasi_json || '{}');
+    cek(realisasiJson.nominal === 2750000, 'nominal realisasi tersimpan benar: ' + rp(realisasiJson.nominal));
+    const lampiranRealisasi = await db.all(
+      "SELECT * FROM lampiran WHERE pengajuan_id = ? AND jenis = 'realisasi'", [dinasUm.id]);
+    cek(lampiranRealisasi.length === 1, 'bukti realisasi tersimpan jenis=realisasi, terpisah dari lampiran penawaran');
+
+    const peranRealisasi1 = (await db.all(
+      'SELECT peran FROM persetujuan_realisasi WHERE pengajuan_id = ? ORDER BY urut', [dinasUm.id])).map(x => x.peran);
+    cek(peranRealisasi1.join(',') === 'area_manager,regional_manager,accounting,ceo',
+      'rantai approval ULANG realisasi sama persis dengan rantai uang muka: ' + peranRealisasi1.join(' → '));
+
+    const kabarTahap1 = await db.all(
+      "SELECT * FROM notifikasi WHERE pengajuan_id = ? AND judul LIKE '%Verifikasi realisasi menunggu%'", [dinasUm.id]);
+    cek(kabarTahap1.length > 0, 'penyetuju tahap pertama (Area Manager) diberi tahu realisasi menunggu dia');
+
+    const antrianAm = await Pj2.kotakMasukRealisasi((await db.get(
+      "SELECT id FROM pengguna WHERE email = 'am.barat@kla.co.id'")).id);
+    cek(antrianAm.some(x => x.id === dinasUm.id), 'dokumen muncul di kotak masuk REALISASI Area Manager (tahap pertama)');
+    const antrianAccBelumGiliran = await Pj2.kotakMasukRealisasi((await db.get(
+      "SELECT id FROM pengguna WHERE email = 'accounting@kla.co.id'")).id);
+    cek(!antrianAccBelumGiliran.some(x => x.id === dinasUm.id),
+      'Accounting BELUM muncul di kotak masuknya sendiri — belum gilirannya (tahap 3)');
+
+    // bukan penyetuju tahap yang sedang aktif ditolak (accounting mencoba lompat dulu)
+    const tLompatGagal = await acc.csrf('/pengajuan/' + dinasUm.id);
+    const rLompatGagal = await acc.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi',
+      [['aksi', 'setuju']], tLompatGagal);
+    cek(rLompatGagal.status === 303, 'Accounting ditolak memutuskan sebelum gilirannya (tahap Area Manager)');
+    const dinasUmSetelahLompatGagal = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmSetelahLompatGagal.status_realisasi === 'diajukan', 'status_realisasi tidak berubah oleh percobaan itu');
+
+    // tahap 1 (Area Manager) setuju -> lanjut tahap 2 (Regional Manager)
+    const tTahap1 = await amBarat.csrf('/pengajuan/' + dinasUm.id);
+    await amBarat.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi', [['aksi', 'setuju']], tTahap1);
+    const tahap1Realisasi = await db.get(
+      "SELECT status FROM persetujuan_realisasi WHERE pengajuan_id = ? AND peran = 'area_manager'", [dinasUm.id]);
+    cek(tahap1Realisasi.status === 'disetujui', 'tahap Area Manager pada rantai realisasi tercatat disetujui');
+
+    // tahap 2 (Regional Manager) setuju -> lanjut tahap 3 (Accounting)
+    const tTahap2 = await rmUji.csrf('/pengajuan/' + dinasUm.id);
+    await rmUji.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi', [['aksi', 'setuju']], tTahap2);
+
+    // tahap 3 (Accounting) minta revisi
+    const tTahap3Revisi = await acc.csrf('/pengajuan/' + dinasUm.id);
+    await acc.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi',
+      [['aksi', 'revisi'], ['komentar', 'Lampirkan kwitansi hotel juga']], tTahap3Revisi);
+    const dinasUmRevisi = await db.get('SELECT * FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmRevisi.status_realisasi === 'revisi', 'Accounting (tahap 3) bisa meminta revisi realisasi');
+    cek(dinasUmRevisi.realisasi_catatan === 'Lampirkan kwitansi hotel juga', 'catatan revisi tersimpan');
+    cek(dinasUmRevisi.status === 'disetujui',
+      'status dokumen UTAMA (uang muka) tetap disetujui — tidak ikut kembali ke revisi');
+    const tahap4SetelahRevisi = await db.get(
+      "SELECT status FROM persetujuan_realisasi WHERE pengajuan_id = ? AND peran = 'ceo'", [dinasUm.id]);
+    cek(tahap4SetelahRevisi.status === 'dilewati',
+      'tahap sesudah yang minta revisi (CEO) ditandai tidak dijalankan, bukan ikut menunggu selamanya');
+
+    // pemohon mengajukan ulang -> rantai realisasi DIBANGUN ULANG dari tahap 1 lagi
+    const tRealisasiUlang = await sm.csrf('/pengajuan/' + dinasUm.id);
+    await sm.post('/pengajuan/' + dinasUm.id + '/realisasi',
+      [['realisasi_nominal', '3.100.000'], ['realisasi_tanggal', '2026-08-21'],
+        ['realisasi_keterangan', 'Termasuk hotel tambahan']], tRealisasiUlang);
+    const dinasUmDiajukanUlang = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmDiajukanUlang.status_realisasi === 'diajukan',
+      'realisasi bisa diajukan ulang sesudah revisi, memakai bukti yang sudah ada sebelumnya (tanpa unggah baru)');
+    const rantaiUlang = await db.all(
+      "SELECT peran, status FROM persetujuan_realisasi WHERE pengajuan_id = ? ORDER BY urut", [dinasUm.id]);
+    cek(rantaiUlang.length === 4 && rantaiUlang.every(r => r.status === 'menunggu'),
+      'rantai realisasi dibangun ULANG dari nol (4 tahap segar, bukan menumpuk di atas percobaan sebelumnya)');
+
+    // tempuh seluruh rantai ulang: area_manager -> regional_manager -> accounting -> ceo, semua setuju
+    await amBarat.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi',
+      [['aksi', 'setuju']], await amBarat.csrf('/pengajuan/' + dinasUm.id));
+    await rmUji.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi',
+      [['aksi', 'setuju']], await rmUji.csrf('/pengajuan/' + dinasUm.id));
+    await acc.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi',
+      [['aksi', 'setuju']], await acc.csrf('/pengajuan/' + dinasUm.id));
+    await ceoUji.post('/pengajuan/' + dinasUm.id + '/putuskan-realisasi',
+      [['aksi', 'setuju']], await ceoUji.csrf('/pengajuan/' + dinasUm.id));
+
+    const dinasUmSelesai = await Pj2.ambil(dinasUm.id);
+    cek(dinasUmSelesai.status_realisasi === 'selesai', 'realisasi selesai — seluruh rantai (4 tahap) menyetujui');
+    cek(!!dinasUmSelesai.realisasi_verif_id, 'tercatat siapa penyetuju tahap TERAKHIR');
+    const ceoUjiUser = await db.get("SELECT id FROM pengguna WHERE email = 'ceo@kla.co.id'");
+    cek(dinasUmSelesai.realisasi_verif_id === ceoUjiUser.id,
+      'penyetuju terakhir yang tercatat adalah CEO (tahap akhir rantai), bukan cuma Accounting');
+    const selisihUji = Number(dinasUmSelesai.total) - Number(dinasUmSelesai.realisasi.nominal);
+    cek(selisihUji === (3000000 - 3100000),
+      'selisih uang muka vs realisasi terhitung benar: ' + rp(selisihUji) + ' (info saja, EAPEX bukan sistem pembayaran)');
+
+    const antrianKosongAm = await Pj2.kotakMasukRealisasi((await db.get(
+      "SELECT id FROM pengguna WHERE email = 'am.barat@kla.co.id'")).id);
+    cek(!antrianKosongAm.some(x => x.id === dinasUm.id), 'dokumen hilang dari kotak masuk realisasi setelah selesai');
+
+    cek(Number(dinasSm.perlu_realisasi) === 0,
+      'dokumen dinas "langsung final" (tanpa memilih uang muka) tidak memakai alur ini');
+
     // ---------------------------------------------------------------- saringan periode
     judul('D7. SARINGAN BULAN & TAHUN');
     const kini = new Date();

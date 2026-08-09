@@ -207,6 +207,158 @@
       </div>
     </div>
 
+    <% if (p.perlu_realisasi) { %>
+      <% var bolehIsiRealisasi = p.pemohon_id === pengguna.id || pengguna.peran === 'admin';
+         var selisihRealisasi = p.realisasi ? Number(p.total || 0) - Number(p.realisasi.nominal || 0) : null;
+         var tahapRevisiRealisasi = (p.persetujuan_realisasi || []).slice().reverse()
+           .find(function (s) { return s.status === 'revisi'; }); %>
+      <div class="kartu" style="border-color:var(--emas)">
+        <div class="kepala"><h3>Uang Muka &amp; Penyelesaian</h3></div>
+        <div class="badan">
+          <% if (p.status !== 'disetujui') { %>
+            <p class="lemah">
+              Dokumen ini memakai alur uang muka. Penyelesaian (isi realisasi) baru bisa dilakukan
+              setelah seluruh tahap approval di atas selesai.
+            </p>
+          <% } else if (p.status_realisasi === 'menunggu' || p.status_realisasi === 'revisi') { %>
+            <% if (p.status_realisasi === 'revisi') { %>
+              <div class="pesan galat">
+                <b>Diminta revisi<%= tahapRevisiRealisasi ? ' oleh ' + tahapRevisiRealisasi.label
+                  + (tahapRevisiRealisasi.aktor_nama ? ' (' + tahapRevisiRealisasi.aktor_nama + ')' : '') : '' %>:</b>
+                <%= p.realisasi_catatan || '-' %>
+              </div>
+            <% } %>
+            <% if (bolehIsiRealisasi) { %>
+              <form method="post" action="/pengajuan/<%= p.id %>/realisasi" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<%= csrf %>">
+                <div class="petunjuk" style="margin-bottom:8px">
+                  Uang muka disetujui: <b><%= rp(p.total) %></b>. Isi realisasi sesungguhnya di bawah ini —
+                  akan memicu approval ulang oleh alur yang sama seperti uang mukanya.
+                </div>
+                <div class="kisi k2">
+                  <div class="medan">
+                    <label class="f">Nominal realisasi</label>
+                    <input type="text" name="realisasi_nominal" placeholder="mis. 2.850.000">
+                  </div>
+                  <div class="medan">
+                    <label class="f">Tanggal realisasi</label>
+                    <input type="date" name="realisasi_tanggal">
+                  </div>
+                </div>
+                <div class="medan">
+                  <label class="f">Keterangan</label>
+                  <textarea name="realisasi_keterangan" maxlength="2000" placeholder="Catatan tambahan (opsional)"></textarea>
+                </div>
+                <div class="medan">
+                  <label class="f">Bukti / kwitansi</label>
+                  <input type="file" name="berkas" multiple>
+                  <div class="petunjuk">PDF, JPG, PNG, Excel, Word, CSV. Maksimal <%= maksMB %> MB per berkas.</div>
+                </div>
+                <button class="tombol emas" type="submit" data-aksi="konfirmasi"
+                  data-pesan="Ajukan realisasi ini? Akan memicu approval ulang seperti uang mukanya.">Selesaikan Perjalanan Dinas</button>
+              </form>
+            <% } else { %>
+              <p class="lemah">Menunggu pemohon menyelesaikan (mengisi realisasi) perjalanan dinas ini.</p>
+            <% } %>
+          <% } else if (p.status_realisasi === 'diajukan') { %>
+            <dl class="rincian" style="margin-bottom:10px">
+              <dt>Uang muka</dt><dd><%= rp(p.total) %></dd>
+              <dt>Realisasi diajukan</dt><dd class="tebal"><%= rp(p.realisasi && p.realisasi.nominal) %></dd>
+              <dt>Tanggal realisasi</dt><dd><%= tglSingkat(p.realisasi && p.realisasi.tanggal) %></dd>
+              <% if (p.realisasi && p.realisasi.keterangan) { %><dt>Keterangan</dt><dd><%= p.realisasi.keterangan %></dd><% } %>
+              <dt>Diajukan</dt><dd><%= tglIndo(p.realisasi_diajukan, true) %></dd>
+            </dl>
+
+            <!-- Alur approval ulang realisasi — sama gayanya dengan Alur Approval
+                 di atas, tapi ringkas (tabel persetujuan_realisasi terpisah). -->
+            <div class="alur-lebar" style="margin-bottom:10px">
+              <% p.persetujuan_realisasi.forEach(function (s) {
+                 var aktifIniR = langkahAktifRealisasi && langkahAktifRealisasi.id === s.id;
+                 var klsR = s.status === 'disetujui' ? 'oke'
+                          : (s.status === 'revisi' ? 'revisi'
+                          : (s.status === 'dilewati' ? 'lewat' : (aktifIniR ? 'kini' : ''))); %>
+                <div class="tahap <%= klsR %>">
+                  <div><div class="bulat"><%= s.status === 'disetujui' ? '✓' : (s.status === 'revisi' ? '↩' : s.urut) %></div></div>
+                  <div><div class="nama-tahap"><%= s.label %></div><div class="peran-tahap">Tahap <%= s.urut %></div></div>
+                  <div class="kolom-orang">
+                    <% if (s.aktor_nama) { %>
+                      <div class="orang"><%= s.aktor_nama %></div>
+                      <div class="jabatan"><%= s.aktor_jabatan || '' %></div>
+                    <% } else { %>
+                      <div class="orang"><%= (s.kandidat || []).map(function (k) { return k.nama; }).join(', ') || '⚠ belum ada penyetuju' %></div>
+                      <div class="jabatan"><%= labelPeran(s.peran) %></div>
+                    <% } %>
+                  </div>
+                  <div class="kolom-status">
+                    <% if (s.status === 'menunggu') { %>
+                      <span class="lencana <%= aktifIniR ? 'kuning' : 'abu' %>"><%= aktifIniR ? 'Menunggu sekarang' : 'Belum jalan' %></span>
+                    <% } else if (s.status === 'dilewati') { %>
+                      <span class="lencana abu">Tidak dijalankan</span>
+                    <% } else { %>
+                      <span class="lencana <%= s.status === 'disetujui' ? 'hijau' : 'oranye' %>"><%= s.status === 'disetujui' ? 'Disetujui' : 'Revisi' %></span>
+                    <% } %>
+                  </div>
+                  <div class="waktu"><%= s.waktu ? tglIndo(s.waktu, true) : '—' %></div>
+                  <% if (s.komentar) { %><div class="catatan"><%= s.komentar %></div><% } %>
+                </div>
+              <% }) %>
+            </div>
+
+            <% if (bolehPutusRealisasi) { %>
+              <form method="post" action="/pengajuan/<%= p.id %>/putuskan-realisasi">
+                <input type="hidden" name="_csrf" value="<%= csrf %>">
+                <div class="medan">
+                  <label class="f">Catatan (wajib bila minta revisi)</label>
+                  <textarea name="catatan" maxlength="2000"></textarea>
+                </div>
+                <div class="baris-tombol">
+                  <button class="tombol hijau" type="submit" name="aksi" value="setuju" data-aksi="konfirmasi"
+                    data-pesan="Setujui realisasi ini?">Setujui</button>
+                  <button class="tombol merah" type="submit" name="aksi" value="revisi" data-aksi="konfirmasi"
+                    data-pesan="Minta pemohon merevisi realisasi ini?">Minta Revisi</button>
+                </div>
+              </form>
+            <% } else { %>
+              <p class="lemah">Menunggu <%= langkahAktifRealisasi ? langkahAktifRealisasi.label : 'penyetuju' %>.</p>
+            <% } %>
+          <% } else if (p.status_realisasi === 'selesai') { %>
+            <dl class="rincian">
+              <dt>Uang muka</dt><dd><%= rp(p.total) %></dd>
+              <dt>Realisasi</dt><dd class="tebal"><%= rp(p.realisasi && p.realisasi.nominal) %></dd>
+              <dt>Tanggal realisasi</dt><dd><%= tglSingkat(p.realisasi && p.realisasi.tanggal) %></dd>
+              <% if (p.realisasi && p.realisasi.keterangan) { %><dt>Keterangan</dt><dd><%= p.realisasi.keterangan %></dd><% } %>
+              <dt>Selisih</dt>
+              <dd class="tebal">
+                <%= rp(Math.abs(selisihRealisasi)) %>
+                <span class="lemah">
+                  (<%= selisihRealisasi > 0 ? 'kelebihan uang muka — info saja, penyelesaian dana di luar sistem'
+                      : (selisihRealisasi < 0 ? 'kekurangan uang muka — info saja, penyelesaian dana di luar sistem' : 'pas, tidak ada selisih') %>)
+                </span>
+              </dd>
+              <dt>Disetujui akhir oleh</dt>
+              <dd><%= p.realisasi_verif_nama || '-' %> · <%= tglIndo(p.realisasi_selesai, true) %></dd>
+            </dl>
+            <div class="alur-lebar" style="margin-top:10px">
+              <% p.persetujuan_realisasi.forEach(function (s) { %>
+                <div class="tahap <%= s.status === 'disetujui' ? 'oke' : (s.status === 'dilewati' ? 'lewat' : '') %>">
+                  <div><div class="bulat"><%= s.status === 'disetujui' ? '✓' : s.urut %></div></div>
+                  <div><div class="nama-tahap"><%= s.label %></div><div class="peran-tahap">Tahap <%= s.urut %></div></div>
+                  <div class="kolom-orang">
+                    <div class="orang"><%= s.aktor_nama || '-' %></div>
+                    <div class="jabatan"><%= s.aktor_jabatan || '' %></div>
+                  </div>
+                  <div class="kolom-status">
+                    <span class="lencana <%= s.status === 'disetujui' ? 'hijau' : 'abu' %>"><%= s.status === 'disetujui' ? 'Disetujui' : 'Tidak dijalankan' %></span>
+                  </div>
+                  <div class="waktu"><%= s.waktu ? tglIndo(s.waktu, true) : '—' %></div>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+
     <% if (p.items.length) { %>
       <div class="kartu">
         <div class="kepala"><h3>Rincian Biaya</h3></div>
