@@ -232,21 +232,74 @@
               <form method="post" action="/pengajuan/<%= p.id %>/realisasi" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="<%= csrf %>">
                 <div class="petunjuk" style="margin-bottom:8px">
-                  Uang muka disetujui: <b><%= rp(p.total) %></b>. Isi realisasi sesungguhnya di bawah ini —
-                  akan memicu approval ulang oleh alur yang sama seperti uang mukanya.
+                  Uang muka disetujui: <b><%= rp(p.total) %></b>. Isi rincian realisasi sesungguhnya per baris
+                  (Transport, Hotel, Uang Makan, dst) di bawah ini — akan memicu approval ulang oleh alur yang
+                  sama seperti uang mukanya.
                 </div>
-                <div class="kisi k2">
-                  <div class="medan">
-                    <label class="f">Nominal realisasi</label>
-                    <input type="text" name="realisasi_nominal" placeholder="mis. 2.850.000">
-                  </div>
-                  <div class="medan">
-                    <label class="f">Tanggal realisasi</label>
-                    <input type="date" name="realisasi_tanggal">
-                  </div>
+                <div class="gulir">
+                  <table class="data item" id="tabel-item">
+                    <thead>
+                      <tr>
+                        <th style="width:30px">#</th>
+                        <th>Uraian</th>
+                        <th style="width:70px">Qty</th>
+                        <th style="width:90px">Satuan</th>
+                        <th style="width:150px">Harga (Rp)</th>
+                        <th style="width:150px" class="angka">Nominal (Rp)</th>
+                        <th>Keterangan</th>
+                        <th style="width:40px"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% var barisRealisasiAwal = (p.realisasi_items && p.realisasi_items.length)
+                         ? p.realisasi_items : [{ nama: '', qty: 1, satuan: 'unit', harga: '', keterangan: '' }]; %>
+                      <% barisRealisasiAwal.forEach(function (it) { %>
+                        <tr>
+                          <td class="no-baris">1.</td>
+                          <td><input type="text" name="item_nama[]" value="<%= it.nama || '' %>" maxlength="300"
+                            data-medan="Uraian" data-bantu="Satu baris per jenis biaya, mis. Transport, Hotel, Uang Makan."></td>
+                          <td><input type="text" name="item_qty[]" value="<%= it.qty || 1 %>" inputmode="numeric"
+                            data-medan="Qty" data-bantu="Jumlah unit. Nominal dihitung otomatis qty × harga."></td>
+                          <td><input type="text" name="item_satuan[]" value="<%= it.satuan || 'unit' %>" maxlength="40"
+                            data-medan="Satuan" data-bantu="unit, hari, malam, dan sejenisnya."></td>
+                          <td><input type="text" name="item_harga[]" data-uang value="<%= it.harga || '' %>"
+                            data-medan="Harga satuan" data-bantu="Harga satuan sesuai nota/kwitansi."></td>
+                          <td class="angka nominal-baris">0</td>
+                          <td><input type="text" name="item_ket[]" value="<%= it.keterangan || '' %>" maxlength="300"
+                            data-medan="Keterangan baris" data-bantu="Catatan singkat, mis. nomor nota."></td>
+                          <td class="aksi"><button type="button" class="tombol kecil" data-aksi="hapus-baris" title="Hapus baris">✕</button></td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                    <tfoot>
+                      <tr class="baris-total">
+                        <td colspan="5" class="kanan">TOTAL REALISASI</td>
+                        <td class="angka" id="total-pengajuan">Rp 0</td>
+                        <td colspan="2"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div class="baris-tombol" style="margin:10px 0">
+                  <button type="button" class="tombol kecil" data-aksi="tambah-baris">+ Tambah baris</button>
+                  <span class="petunjuk" style="margin:0">Baris tanpa uraian tidak ikut disimpan.</span>
+                </div>
+                <template id="contoh-baris">
+                  <td class="no-baris"></td>
+                  <td><input type="text" name="item_nama[]" maxlength="300" data-medan="Uraian" data-bantu="Satu baris per jenis biaya, mis. Transport, Hotel, Uang Makan."></td>
+                  <td><input type="text" name="item_qty[]" value="1" inputmode="numeric" data-medan="Qty" data-bantu="Jumlah unit."></td>
+                  <td><input type="text" name="item_satuan[]" value="unit" maxlength="40" data-medan="Satuan" data-bantu="unit, hari, malam, dan sejenisnya."></td>
+                  <td><input type="text" name="item_harga[]" data-uang data-medan="Harga satuan" data-bantu="Harga satuan sesuai nota/kwitansi."></td>
+                  <td class="angka nominal-baris">0</td>
+                  <td><input type="text" name="item_ket[]" maxlength="300" data-medan="Keterangan baris" data-bantu="Catatan singkat, mis. nomor nota."></td>
+                  <td class="aksi"><button type="button" class="tombol kecil" data-aksi="hapus-baris" title="Hapus baris">✕</button></td>
+                </template>
+                <div class="medan">
+                  <label class="f">Tanggal realisasi</label>
+                  <input type="date" name="realisasi_tanggal">
                 </div>
                 <div class="medan">
-                  <label class="f">Keterangan</label>
+                  <label class="f">Keterangan umum</label>
                   <textarea name="realisasi_keterangan" maxlength="2000" placeholder="Catatan tambahan (opsional)"></textarea>
                 </div>
                 <div class="medan">
@@ -261,13 +314,25 @@
               <p class="lemah">Menunggu pemohon menyelesaikan (mengisi realisasi) perjalanan dinas ini.</p>
             <% } %>
           <% } else if (p.status_realisasi === 'diajukan') { %>
-            <dl class="rincian" style="margin-bottom:10px">
+            <dl class="rincian" style="margin-bottom:6px">
               <dt>Uang muka</dt><dd><%= rp(p.total) %></dd>
-              <dt>Realisasi diajukan</dt><dd class="tebal"><%= rp(p.realisasi && p.realisasi.nominal) %></dd>
               <dt>Tanggal realisasi</dt><dd><%= tglSingkat(p.realisasi && p.realisasi.tanggal) %></dd>
               <% if (p.realisasi && p.realisasi.keterangan) { %><dt>Keterangan</dt><dd><%= p.realisasi.keterangan %></dd><% } %>
               <dt>Diajukan</dt><dd><%= tglIndo(p.realisasi_diajukan, true) %></dd>
             </dl>
+            <% if ((p.realisasi_items || []).length) { %>
+              <table class="data" style="margin-bottom:10px">
+                <thead><tr><th>Uraian</th><th class="angka">Qty</th><th>Satuan</th><th class="angka">Nominal</th></tr></thead>
+                <tbody>
+                  <% p.realisasi_items.forEach(function (it) { %>
+                    <tr><td><%= it.nama %><%= it.keterangan ? ' — ' + it.keterangan : '' %></td>
+                      <td class="angka"><%= angka(it.qty) %></td><td><%= it.satuan || '' %></td>
+                      <td class="angka"><%= rp(it.nominal) %></td></tr>
+                  <% }) %>
+                  <tr><td colspan="3" class="kanan tebal">Total Realisasi</td><td class="angka tebal"><%= rp(p.realisasi && p.realisasi.nominal) %></td></tr>
+                </tbody>
+              </table>
+            <% } %>
 
             <!-- Alur approval ulang realisasi — sama gayanya dengan Alur Approval
                  di atas, tapi ringkas (tabel persetujuan_realisasi terpisah). -->
@@ -322,6 +387,18 @@
               <p class="lemah">Menunggu <%= langkahAktifRealisasi ? langkahAktifRealisasi.label : 'penyetuju' %>.</p>
             <% } %>
           <% } else if (p.status_realisasi === 'selesai') { %>
+            <% if ((p.realisasi_items || []).length) { %>
+              <table class="data" style="margin-bottom:10px">
+                <thead><tr><th>Uraian</th><th class="angka">Qty</th><th>Satuan</th><th class="angka">Nominal</th></tr></thead>
+                <tbody>
+                  <% p.realisasi_items.forEach(function (it) { %>
+                    <tr><td><%= it.nama %><%= it.keterangan ? ' — ' + it.keterangan : '' %></td>
+                      <td class="angka"><%= angka(it.qty) %></td><td><%= it.satuan || '' %></td>
+                      <td class="angka"><%= rp(it.nominal) %></td></tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            <% } %>
             <dl class="rincian">
               <dt>Uang muka</dt><dd><%= rp(p.total) %></dd>
               <dt>Realisasi</dt><dd class="tebal"><%= rp(p.realisasi && p.realisasi.nominal) %></dd>

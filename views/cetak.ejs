@@ -105,7 +105,6 @@
         %></b></td></tr>
         <tr><td class="k">Uang Muka Disetujui</td><td class="d">:</td><td><%= rp(p.total) %></td></tr>
         <% if (p.realisasi) { %>
-          <tr><td class="k">Realisasi</td><td class="d">:</td><td><%= rp(p.realisasi.nominal) %></td></tr>
           <tr><td class="k">Tanggal Realisasi</td><td class="d">:</td><td><%= tglIndo(p.realisasi.tanggal) %></td></tr>
           <% if (p.status_realisasi === 'selesai') { %>
             <% var selisihCetak = Number(p.total || 0) - Number(p.realisasi.nominal || 0); %>
@@ -119,6 +118,28 @@
           <% } %>
         <% } %>
       </table>
+      <% if ((p.realisasi_items || []).length) { %>
+        <table class="kotak" style="margin-top:4px">
+          <thead>
+            <tr><th style="width:26px">No</th><th>Uraian</th><th style="width:44px">Qty</th>
+              <th style="width:60px">Satuan</th><th style="width:105px">Harga</th><th style="width:110px">Nominal</th></tr>
+          </thead>
+          <tbody>
+            <% p.realisasi_items.forEach(function (it, i) { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><%= it.nama %><%= it.keterangan ? ' — ' + it.keterangan : '' %></td>
+                <td style="text-align:right"><%= angka(it.qty) %></td>
+                <td><%= it.satuan || '' %></td>
+                <td style="text-align:right"><%= angka(it.harga) %></td>
+                <td style="text-align:right"><%= angka(it.nominal) %></td>
+              </tr>
+            <% }) %>
+            <tr><td colspan="5" style="text-align:right"><b>TOTAL REALISASI</b></td>
+              <td style="text-align:right"><b><%= angka(p.realisasi.nominal) %></b></td></tr>
+          </tbody>
+        </table>
+      <% } %>
       <% if ((p.persetujuan_realisasi || []).length) { %>
         <table class="kotak" style="margin-top:4px">
           <thead>

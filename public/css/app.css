@@ -510,7 +510,7 @@ table.item td.aksi { width: 38px; text-align: center; }
 /* @page TERPISAH dari @media print (bukan disarangkan): letak ini kompatibel
    di lebih banyak mesin render PDF/cetak. Margin bawaan Chrome ~19mm tiap
    sisi — pemborosan terbesar pada dokumen satu halaman seperti ini. */
-@page { size: A4; margin: 6mm 9mm; }
+@page { size: A4; margin: 5mm 8mm; }
 
 @media print {
   .samping, .atas, .bilah-cetak, .tanpa-cetak { display: none !important; }
@@ -527,24 +527,24 @@ table.item td.aksi { width: 38px; text-align: center; }
      tabel penuh (rincian realisasi + riwayat approval ulang). Semua di bawah
      ini HANYA berlaku saat benar-benar dicetak — pratinjau di layar sebelum
      menekan "Cetak / Simpan PDF" tidak berubah sama sekali. */
-  body, .lembar { font-size: 9px; }
-  .lembar .kop { padding-bottom: 2px; margin-bottom: 4px; }
-  .lembar h1 { margin: 2px 0 1px; font-size: 11.5px; }
-  .lembar .nomor-dok { margin-bottom: 4px; }
-  .lembar h3 { margin: 4px 0 1px; padding: 1.5px 6px; font-size: 9.5px; }
-  .lembar table { font-size: 9px; }
-  .lembar table.kotak th, .lembar table.kotak td { padding: 1px 4px; }
+  body, .lembar { font-size: 8.5px; }
+  .lembar .kop { padding-bottom: 2px; margin-bottom: 3px; }
+  .lembar h1 { margin: 2px 0 1px; font-size: 11px; }
+  .lembar .nomor-dok { margin-bottom: 3px; }
+  .lembar h3 { margin: 3px 0 1px; padding: 1px 5px; font-size: 9px; }
+  .lembar table { font-size: 8.5px; }
+  .lembar table.kotak th, .lembar table.kotak td { padding: 0.5px 3px; }
   .lembar table.rinci td { padding: 0.5px 0; }
-  .lembar table.rinci td.k { width: 145px; }
-  .lembar .ttd-baris { margin-top: 3px; page-break-inside: avoid; }
+  .lembar table.rinci td.k { width: 140px; }
+  .lembar .ttd-baris { margin-top: 2px; page-break-inside: avoid; }
   .lembar .ttd-sel { page-break-inside: avoid; }
-  .lembar .ttd-sel .kotak-ttd { height: 18px; margin-bottom: 1px; }
+  .lembar .ttd-sel .kotak-ttd { height: 15px; margin-bottom: 1px; }
   /* Kotak "DISETUJUI SECARA ELEKTRONIK" memuat 2 baris teks — kalau ikut
      dipangkas ke tinggi kotak kosong di atas, teksnya meluber ke luar kotak
      dan bertabrakan dengan kolom sebelahnya. Diberi tinggi sendiri dan
      fontnya dikecilkan supaya pas. */
-  .lembar .ttd-sel .kotak-ttd-disetujui { height: 24px; font-size: 6px; line-height: 1.2; }
-  .lembar .kaki-dok { margin-top: 2px; padding-top: 1px; font-size: 7px; page-break-inside: avoid; }
+  .lembar .ttd-sel .kotak-ttd-disetujui { height: 21px; font-size: 5.5px; line-height: 1.15; }
+  .lembar .kaki-dok { margin-top: 2px; padding-top: 1px; font-size: 6.5px; page-break-inside: avoid; }
 }
 
 /* ------------------------------------------------------------ layar kecil */

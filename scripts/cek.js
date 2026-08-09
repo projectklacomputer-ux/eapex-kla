@@ -836,31 +836,47 @@ async function cekAlur() {
       "SELECT * FROM notifikasi WHERE pengajuan_id = ? AND judul LIKE '%selesaikan uang muka%'", [dinasUm.id]);
     cek(kabarSelesaikan.length > 0, 'pemohon diberi tahu untuk menyelesaikan uang muka setelah disetujui penuh');
 
+    // rincian per baris (Transport, Hotel, dst) untuk realisasi -- field sama
+    // persis dengan rincian biaya uang muka (item_nama/item_qty/item_satuan/item_harga)
+    const itemRealisasi1 = [
+      ['item_nama', 'Transport'], ['item_qty', '1'], ['item_satuan', 'paket'], ['item_harga', '2.000.000'],
+      ['item_nama', 'Hotel'], ['item_qty', '1'], ['item_satuan', 'paket'], ['item_harga', '750.000'],
+      ['realisasi_tanggal', '2026-08-20'], ['realisasi_keterangan', 'Hemat transport'],
+    ];
+
     // bukan pemohon tidak boleh mengisi realisasi
     const tGagalRealisasi = await amBarat.csrf('/pengajuan/' + dinasUm.id);
-    const rGagalRealisasi = await amBarat.post('/pengajuan/' + dinasUm.id + '/realisasi',
-      [['realisasi_nominal', '2.800.000'], ['realisasi_tanggal', '2026-08-20']], tGagalRealisasi);
+    const rGagalRealisasi = await amBarat.post('/pengajuan/' + dinasUm.id + '/realisasi', itemRealisasi1, tGagalRealisasi);
     cek(rGagalRealisasi.status === 303, 'bukan pemohon ditolak mengisi realisasi');
     const dinasUmSetelahGagal = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
     cek(dinasUmSetelahGagal.status_realisasi === 'menunggu', 'status_realisasi tidak berubah oleh percobaan orang lain');
 
-    // realisasi tanpa bukti/kwitansi ditolak
-    const tTanpaBukti = await sm.csrf('/pengajuan/' + dinasUm.id);
+    // rincian kosong (tanpa baris) ditolak
+    const tKosong = await sm.csrf('/pengajuan/' + dinasUm.id);
     await sm.post('/pengajuan/' + dinasUm.id + '/realisasi',
-      [['realisasi_nominal', '2.800.000'], ['realisasi_tanggal', '2026-08-20']], tTanpaBukti);
+      [['realisasi_tanggal', '2026-08-20']], tKosong);
+    const dinasUmKosong = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    cek(dinasUmKosong.status_realisasi === 'menunggu', 'realisasi tanpa satu pun baris rincian ditolak');
+
+    // rincian terisi tapi tanpa bukti/kwitansi ditolak
+    const tTanpaBukti = await sm.csrf('/pengajuan/' + dinasUm.id);
+    await sm.post('/pengajuan/' + dinasUm.id + '/realisasi', itemRealisasi1, tTanpaBukti);
     const dinasUmTanpaBukti = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
     cek(dinasUmTanpaBukti.status_realisasi === 'menunggu', 'realisasi tanpa bukti/kwitansi ditolak (status tidak berubah)');
 
-    // realisasi lengkap dengan bukti -> memicu rantai approval ULANG, sama seperti uang muka
+    // rincian lengkap dengan bukti -> memicu rantai approval ULANG, sama seperti uang muka
     const tRealisasi = await sm.csrf('/pengajuan/' + dinasUm.id);
-    await sm.postBerkas('/pengajuan/' + dinasUm.id + '/realisasi',
-      [['realisasi_nominal', '2.750.000'], ['realisasi_tanggal', '2026-08-20'],
-        ['realisasi_keterangan', 'Hemat transport']],
+    await sm.postBerkas('/pengajuan/' + dinasUm.id + '/realisasi', itemRealisasi1,
       [{ nama: 'Kwitansi-Yogyakarta.pdf', mime: 'application/pdf', isi: '%PDF-1.4 kwitansi uji' }], tRealisasi);
     const dinasUmDiajukan = await db.get('SELECT * FROM pengajuan WHERE id = ?', [dinasUm.id]);
     cek(dinasUmDiajukan.status_realisasi === 'diajukan', 'realisasi dengan bukti berhasil diajukan');
     const realisasiJson = JSON.parse(dinasUmDiajukan.realisasi_json || '{}');
-    cek(realisasiJson.nominal === 2750000, 'nominal realisasi tersimpan benar: ' + rp(realisasiJson.nominal));
+    cek(realisasiJson.nominal === 2750000,
+      'nominal realisasi = penjumlahan baris (2.000.000 + 750.000): ' + rp(realisasiJson.nominal));
+    const itemRealisasiTersimpan = await db.all(
+      'SELECT * FROM pengajuan_realisasi_item WHERE pengajuan_id = ? ORDER BY urut', [dinasUm.id]);
+    cek(itemRealisasiTersimpan.length === 2 && itemRealisasiTersimpan[0].nama === 'Transport'
+      && itemRealisasiTersimpan[1].nama === 'Hotel', 'rincian realisasi tersimpan per baris (Transport, Hotel)');
     const lampiranRealisasi = await db.all(
       "SELECT * FROM lampiran WHERE pengajuan_id = ? AND jenis = 'realisasi'", [dinasUm.id]);
     cek(lampiranRealisasi.length === 1, 'bukti realisasi tersimpan jenis=realisasi, terpisah dari lampiran penawaran');
@@ -917,12 +933,16 @@ async function cekAlur() {
 
     // pemohon mengajukan ulang -> rantai realisasi DIBANGUN ULANG dari tahap 1 lagi
     const tRealisasiUlang = await sm.csrf('/pengajuan/' + dinasUm.id);
-    await sm.post('/pengajuan/' + dinasUm.id + '/realisasi',
-      [['realisasi_nominal', '3.100.000'], ['realisasi_tanggal', '2026-08-21'],
-        ['realisasi_keterangan', 'Termasuk hotel tambahan']], tRealisasiUlang);
-    const dinasUmDiajukanUlang = await db.get('SELECT status_realisasi FROM pengajuan WHERE id = ?', [dinasUm.id]);
+    await sm.post('/pengajuan/' + dinasUm.id + '/realisasi', [
+      ['item_nama', 'Transport'], ['item_qty', '1'], ['item_satuan', 'paket'], ['item_harga', '2.200.000'],
+      ['item_nama', 'Hotel'], ['item_qty', '1'], ['item_satuan', 'paket'], ['item_harga', '900.000'],
+      ['realisasi_tanggal', '2026-08-21'], ['realisasi_keterangan', 'Termasuk hotel tambahan'],
+    ], tRealisasiUlang);
+    const dinasUmDiajukanUlang = await db.get('SELECT status_realisasi, realisasi_json FROM pengajuan WHERE id = ?', [dinasUm.id]);
     cek(dinasUmDiajukanUlang.status_realisasi === 'diajukan',
       'realisasi bisa diajukan ulang sesudah revisi, memakai bukti yang sudah ada sebelumnya (tanpa unggah baru)');
+    cek(JSON.parse(dinasUmDiajukanUlang.realisasi_json).nominal === 3100000,
+      'rincian diajukan ulang dihitung ulang totalnya (2.200.000 + 900.000)');
     const rantaiUlang = await db.all(
       "SELECT peran, status FROM persetujuan_realisasi WHERE pengajuan_id = ? ORDER BY urut", [dinasUm.id]);
     cek(rantaiUlang.length === 4 && rantaiUlang.every(r => r.status === 'menunggu'),

@@ -503,15 +503,17 @@ r.post('/:id/lampiran/:lid/hapus', async (req, res, next) => {
 r.post('/:id/realisasi', terimaBerkas('berkas', 5), async (req, res, next) => {
   const b = req.body || {};
   try {
-    const nominal = keRupiahBulat(b.realisasi_nominal);
     const tanggal = bersih(b.realisasi_tanggal);
     const keterangan = String(b.realisasi_keterangan || '').trim().slice(0, 2000);
+    // Rincian per baris (Transport, Hotel, Uang Makan, dst) -- field yang sama
+    // persis (item_nama[] dkk) dan pembaca yang sama dengan rincian biaya uang muka.
+    const items = form.bacaItems(b);
     // Validasi & insert lampiran ada DI DALAM alur.ajukanRealisasi (satu transaksi),
     // supaya berkas yang terunggah tidak pernah tersimpan sendirian saat
     // pemeriksaan lain (wewenang, nominal, rantai approval) gagal.
     req.berkasDipakai = true;
     await alur.ajukanRealisasi(req.params.id, req.pengguna,
-      { nominal, tanggal, keterangan, berkas: req.files || [] }, req.ip);
+      { items, tanggal, keterangan, berkas: req.files || [] }, req.ip);
     res.kilat('sukses', 'Realisasi berhasil diajukan, menunggu approval ulang (sama seperti alur uang mukanya).');
   } catch (e) {
     if (!e.publik) return next(e);
