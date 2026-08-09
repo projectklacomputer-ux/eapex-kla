@@ -153,6 +153,7 @@
                 var f = TUJUAN_CAPEX.filter(function (x) { return x.kode === k; })[0]; return f ? f.teks : k; });
             %><%= tj.length ? tj.join(', ') : '-' %></dd>
             <dt>Kategori aset</dt><dd><%= d.kategori_aset || '-' %></dd>
+            <dt>Umur ekonomis</dt><dd><%= umurAset(d.kategori_aset) ? umurAset(d.kategori_aset) + ' tahun' : '-' %></dd>
             <dt>Lokasi</dt><dd><%= d.lokasi || '-' %></dd>
             <dt>Vendor</dt><dd><%= d.vendor || '-' %></dd>
             <dt>Jadwal dibutuhkan</dt><dd><%= tanggalKegiatan(d.jadwal_kebutuhan) %></dd>

@@ -141,6 +141,21 @@
     });
   }
 
+  // -------------------------------------------------------------- umur ekonomis aset (CAPEX)
+  // Murni tampilan, dihitung dari kategori aset (lib/konstanta.js umurAset) --
+  // dikirim lewat data-umur-aset pada <select>, bukan <script> sebaris (CSP).
+  // Field-nya sendiri disabled sehingga tidak pernah ikut terkirim di formulir.
+  function pasangUmurAset() {
+    var sel = document.getElementById('kategori-aset');
+    var info = document.getElementById('umur-aset-info');
+    if (!sel || !info) return;
+    var peta = {};
+    try { peta = JSON.parse(sel.getAttribute('data-umur-aset') || '{}'); } catch (e) { peta = {}; }
+    sel.addEventListener('change', function () {
+      info.value = (peta[sel.value] || '-') + ' tahun';
+    });
+  }
+
   // -------------------------------------------------------------- lain-lain
   // Pendengar tunggal untuk SEMUA isian: qty, margin, dan kolom uang sama-sama
   // memicu hitung ulang. Tanpa ini, mengubah Qty atau Margin (yang bukan kolom
@@ -783,5 +798,6 @@
     pasangBacaPenawaran();
     pasangTandaWajib();
     pasangPilihanLewat();
+    pasangUmurAset();
   });
 })();

@@ -216,12 +216,19 @@
           <div class="kisi k4">
             <div class="medan">
               <label class="f">Kategori aset</label>
-              <select name="kategori_aset" data-medan="Kategori aset"
-                data-bantu="Menentukan kelompok aset di pembukuan dan masa penyusutannya.">
+              <select name="kategori_aset" id="kategori-aset" data-medan="Kategori aset"
+                data-bantu="Menentukan kelompok aset di pembukuan dan masa penyusutannya."
+                data-umur-aset='<%- JSON.stringify(UMUR_ASET) %>'>
                 <% KATEGORI_ASET.forEach(function (x) { %>
                   <option value="<%= x %>" <%= data.kategori_aset === x ? 'selected' : '' %>><%= x %></option>
                 <% }) %>
               </select>
+            </div>
+            <div class="medan">
+              <label class="f">Umur ekonomis</label>
+              <input type="text" id="umur-aset-info" readonly disabled
+                value="<%= umurAset(data.kategori_aset || KATEGORI_ASET[0]) %> tahun">
+              <div class="petunjuk">Otomatis mengikuti kategori aset, tidak bisa diubah manual.</div>
             </div>
             <div class="medan">
               <label class="f">Lokasi penempatan</label>

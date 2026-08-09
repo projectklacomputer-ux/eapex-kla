@@ -56,6 +56,7 @@
     <h3>C. Detail Aset / Program</h3>
     <table class="rinci">
       <tr><td class="k">Kategori Aset</td><td class="d">:</td><td><%= d.kategori_aset || '-' %></td></tr>
+      <tr><td class="k">Umur Ekonomis</td><td class="d">:</td><td><%= umurAset(d.kategori_aset) ? umurAset(d.kategori_aset) + ' tahun' : '-' %></td></tr>
       <tr><td class="k">Lokasi Penempatan</td><td class="d">:</td><td><%= d.lokasi || '-' %></td></tr>
       <tr><td class="k">Vendor / Supplier</td><td class="d">:</td><td><%= d.vendor || '-' %></td></tr>
       <tr><td class="k">Jadwal Dibutuhkan</td><td class="d">:</td><td><%= tanggalKegiatan(d.jadwal_kebutuhan) %></td></tr>
